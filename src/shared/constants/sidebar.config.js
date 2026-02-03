@@ -8,10 +8,10 @@ import {
   MessageSquareHeart,
   Contact,
   UsersRound,
-  Flame,
+  UtensilsCrossed,
 } from 'lucide-react'
 
-export const BRAND = { name: 'Admin Dashboard', icon: Flame }
+export const BRAND = { name: 'Trang Quản Trị', icon: UtensilsCrossed }
 
 export const MENU = [
   { key: 'dashboard', label: 'Thống kê', path: '/admin', icon: LayoutDashboard },
