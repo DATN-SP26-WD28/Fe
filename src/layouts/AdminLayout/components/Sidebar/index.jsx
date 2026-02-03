@@ -28,9 +28,9 @@ export default function Sidebar({ role, collapsed: collapsedProp, onCollapse }) 
       }}
       className="!bg-white !border-r !border-gray-100"
     >
-      <div className="flex items-center gap-2 px-4 h-16">
-        <div className="w-9 h-9 rounded-2xl bg-gray-100 grid place-items-center">
-          <Icon size={18} />
+      <div className="flex items-center gap-2 w-full px-4 h-16">
+        <div className="w-9 h-9 rounded-2xl grid place-items-center">
+          <Icon size={18} className="text-blue-600" />
         </div>
         {!collapsed && <span className="text-base font-semibold tracking-tight">{BRAND.name}</span>}
       </div>
