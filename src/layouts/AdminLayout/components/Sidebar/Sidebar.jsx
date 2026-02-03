@@ -5,12 +5,6 @@ import SidebarMenu from './SidebarMenu'
 
 const { Sider } = Layout
 
-/**
- * Props:
- * - role: 'admin' | 'manager' | 'staff' | undefined
- * - collapsed?: boolean
- * - onCollapse?: (boolean) => void
- */
 export default function Sidebar({ role, collapsed: collapsedProp, onCollapse }) {
     const [internalCollapsed, setInternalCollapsed] = useState(false)
     const collapsed =
