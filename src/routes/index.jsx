@@ -1,15 +1,22 @@
-// import { createBrowserRouter, RouterProvider } from "react-router-dom";
-// import clientRoute from "./ClientRoute";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import AdminLayout from "../layouts/AdminLayout";
+import AdminDashboard from "../pages/Admin";
 
-// let router = createBrowserRouter([
-//   // client routes
-//   ...clientRoute,
+const AppRoutes = () => {
+    return (
+        <BrowserRouter>
+            <Routes>
+                {/* Admin layout */}
+                <Route path="/admin" element={<AdminLayout />}>
+                    <Route index element={<AdminDashboard />} />
+                    <Route path="dashboard" element={<AdminDashboard />} />
+                </Route>
 
-//   //   { path: "*", Component: NotFoundPage },
-// ]);
+                {/* Default route */}
+                <Route path="/" element={<Navigate to="/admin" replace />} />
+            </Routes>
+        </BrowserRouter>
+    );
+};
 
-// const AppRouter = () => {
-//   return <RouterProvider router={router} />;
-// };
-
-// export default AppRouter;
+export default AppRoutes;
