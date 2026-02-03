@@ -1,9 +1,10 @@
-import AppRouter from './routes'
+import AppRoutes from './routes'
+import '@shared/styles/tailwind.css'
 
 function App() {
   return (
     <>
-      <AppRouter />
+      <AppRoutes />
     </>
   )
 }

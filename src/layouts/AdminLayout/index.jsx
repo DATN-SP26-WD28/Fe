@@ -3,7 +3,7 @@ import { Outlet } from 'react-router'
 import { Layout } from 'antd'
 const { Content } = Layout
 // components
-import { Sidebar } from './components/Sidebar'
+import Sidebar from './components/Sidebar'
 import HeaderAdmin from './components/HeaderAdmin'
 import FooterAdmin from './components/FooterAdmin'
 

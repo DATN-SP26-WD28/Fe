@@ -1,1 +1,40 @@
-export { default as Sidebar } from './Sidebar'
+import React, { useState } from 'react'
+import { Layout } from 'antd'
+import SidebarMenu from './SidebarMenu'
+import { BRAND } from '@/shared/constants/sidebar.config'
+
+const { Sider } = Layout
+
+export default function Sidebar({ role, collapsed: collapsedProp, onCollapse }) {
+  const [internalCollapsed, setInternalCollapsed] = useState(false)
+  const collapsed = typeof collapsedProp === 'boolean' ? collapsedProp : internalCollapsed
+  const Icon = BRAND.icon
+
+  const handleCollapse = (v) => {
+    if (onCollapse) onCollapse(v)
+    else setInternalCollapsed(v)
+  }
+
+  return (
+    <Sider
+      collapsible
+      collapsed={collapsed}
+      onCollapse={handleCollapse}
+      width={260}
+      collapsedWidth={64}
+      breakpoint="lg"
+      onBreakpoint={(broken) => {
+        if (typeof collapsedProp !== 'boolean') setInternalCollapsed(broken)
+      }}
+      className="!bg-white !border-r !border-gray-100"
+    >
+      <div className="flex items-center gap-2 px-4 h-16">
+        <div className="w-9 h-9 rounded-2xl bg-gray-100 grid place-items-center">
+          <Icon size={18} />
+        </div>
+        {!collapsed && <span className="text-base font-semibold tracking-tight">{BRAND.name}</span>}
+      </div>
+      <SidebarMenu role={role} />
+    </Sider>
+  )
+}

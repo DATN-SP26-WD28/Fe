@@ -15,6 +15,7 @@ export default defineConfig({
       '@layouts': path.resolve(__dirname, 'src/layouts'),
       '@hooks': path.resolve(__dirname, 'src/hooks'),
       '@shared': path.resolve(__dirname, 'src/shared'),
+      '@routes': path.resolve(__dirname, 'src/routes'),
     },
   },
 })
