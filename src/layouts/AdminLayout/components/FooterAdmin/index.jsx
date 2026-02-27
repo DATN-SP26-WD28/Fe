@@ -1,12 +1,12 @@
 import React from 'react'
-
 import { Layout } from 'antd'
+
 const { Footer } = Layout
 
 const FooterAdmin = () => {
   return (
-    <Footer className="text-center text-gray-500">
-      © {new Date().getFullYear()} Admin Dashboard
+    <Footer className="!py-3 text-center text-xs text-gray-400 !border-t !border-gray-100 !bg-white">
+      © {new Date().getFullYear()} Roosta Dashboard. All rights reserved.
     </Footer>
   )
 }

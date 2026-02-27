@@ -20,7 +20,7 @@ const Login = () => {
       </button>
 
       <div className="mb-10 text-center">
-        <div className="w-20 h-20 bg-red-600 rounded-3xl mx-auto flex items-center justify-center text-white text-4xl font-bold shadow-lg shadow-red-200 mb-4">
+        <div className="w-20 h-20 bg-brand rounded-3xl mx-auto flex items-center justify-center text-white text-4xl font-bold shadow-lg shadow-brand-light mb-4">
           R
         </div>
         <h2 className="text-2xl font-bold text-gray-800">Mừng bạn trở lại!</h2>
@@ -52,18 +52,18 @@ const Login = () => {
           <Form.Item name="remember" valuePropName="checked" noStyle>
             <Checkbox className="text-xs text-gray-500">Ghi nhớ tôi</Checkbox>
           </Form.Item>
-          <a className="text-xs text-red-600 font-medium" href="">Quên mật khẩu?</a>
+          <a className="text-xs text-brand font-medium" href="">Quên mật khẩu?</a>
         </div>
 
         <Form.Item>
-          <Button type="primary" htmlType="submit" className="w-full h-12 bg-red-600 hover:bg-red-700 rounded-xl border-none font-bold shadow-lg shadow-red-200">
+          <Button type="primary" htmlType="submit" className="w-full h-12 !bg-brand hover:!bg-brand-dark !rounded-xl !border-none !font-bold !shadow-lg !shadow-brand-light">
             ĐĂNG NHẬP
           </Button>
         </Form.Item>
       </Form>
 
       <p className="text-center text-sm text-gray-500 mt-auto">
-        Chưa có tài khoản? <Link to="/register" className="text-red-600 font-bold">Đăng ký ngay</Link>
+        Chưa có tài khoản? <Link to="/register" className="text-brand font-bold">Đăng ký ngay</Link>
       </p>
     </div>
   );

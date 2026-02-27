@@ -70,14 +70,14 @@ const Register = () => {
         </Form.Item>
 
         <Form.Item>
-          <Button type="primary" htmlType="submit" className="w-full h-12 bg-gray-800 hover:bg-black rounded-xl border-none font-bold mt-4">
+          <Button type="primary" htmlType="submit" className="w-full !h-12 !bg-brand hover:!bg-brand-dark !rounded-xl !border-none !font-bold !shadow-lg !shadow-brand-light mt-4">
             TẠO TÀI KHOẢN
           </Button>
         </Form.Item>
       </Form>
 
       <p className="text-center text-sm text-gray-500 pb-6">
-        Đã có tài khoản? <Link to="/login" className="text-red-600 font-bold">Đăng nhập</Link>
+        Đã có tài khoản? <Link to="/login" className="text-brand font-bold">Đăng nhập</Link>
       </p>
     </div>
   );
