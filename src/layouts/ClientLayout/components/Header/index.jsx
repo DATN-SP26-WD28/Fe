@@ -14,16 +14,22 @@ const Header = () => {
   }, [searchParams]);
 
   return (
-    <header className="h-14 bg-white border-b flex items-center justify-between px-4 shrink-0 shadow-sm z-50">
-      <div className="flex items-center gap-2">
-        <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">R</div>
-        <div className="flex flex-col">
-          <span className="font-bold text-sm text-gray-800 leading-none">ROOSTA</span>
+    <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-4 shrink-0 shadow-sm z-50">
+      <div className="flex items-center gap-2.5">
+        <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center text-white font-bold text-base select-none">
+          R
+        </div>
+        <div className="flex flex-col leading-tight">
+          <span className="font-bold text-sm text-gray-800 tracking-wider">ROOSTA</span>
           <span className="text-[10px] text-red-600 font-medium">Bàn số: {tableNumber}</span>
         </div>
       </div>
-      <div className="flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-full">
-        <span className="text-[10px] font-bold text-gray-600 uppercase">Đang phục vụ</span>
+
+      <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 px-3 py-1 rounded-full">
+        <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+        <span className="text-[10px] font-semibold text-green-700 uppercase tracking-wide">
+          Đang phục vụ
+        </span>
       </div>
     </header>
   );

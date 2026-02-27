@@ -70,7 +70,7 @@ const Register = () => {
         </Form.Item>
 
         <Form.Item>
-          <Button type="primary" htmlType="submit" className="w-full h-12 bg-gray-800 hover:bg-black rounded-xl border-none font-bold mt-4">
+          <Button type="primary" htmlType="submit" className="w-full !h-12 !bg-red-600 hover:!bg-red-700 !rounded-xl !border-none !font-bold !shadow-lg !shadow-red-200 mt-4">
             TẠO TÀI KHOẢN
           </Button>
         </Form.Item>

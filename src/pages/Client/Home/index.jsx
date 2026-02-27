@@ -64,19 +64,19 @@ const Home = () => {
                     </button>
                 </div>
 
-                {/* Phần gợi ý món ăn đặc sắc (Teaser) */}
+                {/* Featured dishes teaser */}
                 <div className="mt-10">
                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-bold text-gray-800">Món ngon phải thử</h3>
-                        <span className="text-red-500 text-xs">Xem thực đơn</span>
+                        <h3 className="font-semibold text-gray-800">Món ngon phải thử</h3>
+                        <span className="text-red-600 text-xs font-medium cursor-pointer">Xem thực đơn →</span>
                     </div>
-                    <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                    <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                         {[1, 2, 3].map((item) => (
-                            <div key={item} className="min-w-[140px] bg-gray-50 rounded-xl overflow-hidden shadow-sm">
-                                <img src={`https://picsum.photos/200/150?random=${item}`} alt="food" className="w-full h-24 object-cover" />
-                                <div className="p-2">
-                                    <p className="text-[10px] font-bold text-gray-700 truncate">Lẩu Nấm Chim Kê</p>
-                                    <p className="text-[10px] text-red-500 mt-1">Từ 299.000đ</p>
+                            <div key={item} className="min-w-[136px] bg-gray-50 rounded-2xl overflow-hidden shadow-sm shrink-0">
+                                <img src={`https://picsum.photos/200/150?random=${item}`} alt="Món ăn đặc sắc" className="w-full h-24 object-cover" loading="lazy" />
+                                <div className="p-2.5">
+                                    <p className="text-xs font-semibold text-gray-700 truncate leading-snug">Lẩu Nấm Chim Kê</p>
+                                    <p className="text-xs text-red-600 font-medium mt-0.5">Từ 299.000đ</p>
                                 </div>
                             </div>
                         ))}
