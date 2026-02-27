@@ -17,6 +17,7 @@ import Home from '@/pages/Client/Home'
 import MenuInerface from '@/pages/Client/MenuInterface'
 import Login from '@/pages/Client/Login'
 import Register from '@/pages/Client/Register'
+import Cart from '@/pages/Client/Cart'
 
 const AppRoutes = () => {
   return (
@@ -40,10 +41,11 @@ const AppRoutes = () => {
         <Route path='/' element={<ClientLayout />}>
           <Route index element={<Home />} />
           <Route path="select-table" element={<MenuInerface />} />
+          <Route path="cart" element={<Cart />} />
+
+
           <Route path="login" element={<Login />} />
           <Route path="register" element={<Register />} />
-
-
         </Route>
       </Routes>
     </BrowserRouter>
