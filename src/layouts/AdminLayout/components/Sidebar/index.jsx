@@ -29,9 +29,9 @@ export default function Sidebar({ role, collapsed: collapsedProp, onCollapse }) 
       className="!bg-white !border-r !border-gray-100"
     >
       <div className="flex items-center gap-2 w-full px-4 h-16">
-        <div className="w-9 h-9 rounded-2xl grid place-items-center">
-          <Icon size={18} className="text-blue-600" />
-        </div>
+        <a href="/admin" className="w-16 h-16w-16 rounded-2xl grid place-items-center">
+          <img src="/logo-roosta.png" alt="Roosta Logo" width={50} />
+        </a>
         {!collapsed && <span className="text-base font-semibold tracking-tight">{BRAND.name}</span>}
       </div>
       <SidebarMenu role={role} />

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 
 const categories = ["Món đặc sắc", "Nước lẩu", "Thịt bò & Cừu", "Hải sản", "Rau củ", "Đồ uống"];
 
-const MenuInerface = () => {
+const MenuInterface = () => {
   const [activeTab, setActiveTab] = useState(0);
 
   return (
@@ -45,4 +45,4 @@ const MenuInerface = () => {
   );
 };
 
-export default MenuInerface;
+export default MenuInterface;
