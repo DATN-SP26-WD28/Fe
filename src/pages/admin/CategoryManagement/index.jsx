@@ -2,7 +2,7 @@ import React from 'react'
 import { Card, Table, Tag, Breadcrumb, Button } from 'antd'
 import { Edit, Trash2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { fetchCategoryList } from '@/services/category/list.service'
+import { fetchCategoryList } from '@/services/category.service'
 import { truncateText } from '@/shared/utils/truncateText'
 import { CATEGORY_PLACEHOLDER_IMG } from '@/assets/images'
 

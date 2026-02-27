@@ -11,7 +11,7 @@ import {
   UtensilsCrossed,
 } from 'lucide-react'
 
-export const BRAND = { name: 'Trang Quản Trị', icon: UtensilsCrossed }
+export const BRAND = { name: 'Roosta Dashboard', icon: UtensilsCrossed }
 
 export const MENU = [
   { key: 'dashboard', label: 'Thống kê', path: '/admin', icon: LayoutDashboard },
