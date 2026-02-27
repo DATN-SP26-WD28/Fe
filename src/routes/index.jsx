@@ -12,6 +12,11 @@ import PaymentAndBill from '@/pages/admin/PaymentAndBill'
 import ReviewManagement from '@/pages/admin/ReviewManagement'
 import StaffManagement from '@/pages/admin/StaffManagement'
 import UserManagement from '@/pages/admin/UserManagement'
+import ClientLayout from '@/layouts/ClientLayout'
+import Home from '@/pages/Client/Home'
+import MenuInerface from '@/pages/Client/MenuInterface'
+import Login from '@/pages/Client/Login'
+import Register from '@/pages/Client/Register'
 
 const AppRoutes = () => {
   return (
@@ -30,8 +35,16 @@ const AppRoutes = () => {
           <Route path="users" element={<UserManagement />} />
         </Route>
 
-        {/* Default route */}
-        <Route path="/" element={<Navigate to="/admin" replace />} />
+
+        {/* Client route */}
+        <Route path='/' element={<ClientLayout />}>
+          <Route index element={<Home />} />
+          <Route path="select-table" element={<MenuInerface />} />
+          <Route path="login" element={<Login />} />
+          <Route path="register" element={<Register />} />
+
+
+        </Route>
       </Routes>
     </BrowserRouter>
   )

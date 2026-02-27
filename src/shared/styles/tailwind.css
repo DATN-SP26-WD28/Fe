@@ -1,1 +1,21 @@
 @import "tailwindcss";
+
+/* Tailwind v4 tự động quét các file trong dự án, 
+nhưng nếu nó không nhận, bạn có thể chỉ định thủ công như sau: */
+@source "../../**/*.{js,jsx,ts,tsx,html}";
+
+/* Các tùy chỉnh theme (nếu có) sẽ nằm trong block này */
+@theme {
+  --color-roosta-red: #e11d48;
+}
+
+/* Fix lỗi scrollbar cho menu bên trái */
+@utility scrollbar-hide {
+  @media (pointer: fine) {
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
