@@ -1,5 +1,4 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import { ConfigProvider } from 'antd'
 import AdminLayout from '../layouts/AdminLayout'
 // Admin pages
 import Dashboard from '@/pages/admin/Dashboard'
@@ -35,24 +34,8 @@ const AppRoutes = () => {
           <Route path="users" element={<UserManagement />} />
         </Route>
 
-        {/* Client route */}
-        <Route
-          path='/'
-          element={
-            <ConfigProvider
-              theme={{
-                token: {
-                  colorPrimary: '#FA4A0C', // Cam Roosta
-                  borderRadius: 30,        // Bo góc lớn như thiết kế
-                  colorBgContainer: '#EFEEEE', // Màu nền xám nhẹ của Input trong ảnh
-                  fontFamily: "'Source Sans Pro', sans-serif",
-                },
-              }}
-            >
-              <ClientLayout />
-            </ConfigProvider>
-          }
-        >
+        {/* Client layout */}
+        <Route path="/" element={<ClientLayout />}>
           <Route index element={<Home />} />
           <Route path="select-table" element={<MenuInterface />} />
           <Route path="login" element={<Login />} />

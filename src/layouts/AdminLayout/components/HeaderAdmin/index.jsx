@@ -22,7 +22,7 @@ const HeaderAdmin = () => {
         />
         <Dropdown menu={{ items: USER_MENU_ITEMS }} trigger={['click']}>
           <button className="flex items-center gap-2 px-2 py-1 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-            <Avatar size={32} icon={<UserOutlined />} className="!bg-red-600" />
+            <Avatar size={32} icon={<UserOutlined />} className="!bg-brand" />
             <span className="hidden md:inline text-sm font-medium text-gray-700">Admin</span>
             <DownOutlined className="text-[10px] text-gray-400" />
           </button>

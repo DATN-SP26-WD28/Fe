@@ -16,12 +16,12 @@ const Header = () => {
   return (
     <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-4 shrink-0 shadow-sm z-50">
       <div className="flex items-center gap-2.5">
-        <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center text-white font-bold text-base select-none">
-          R
-        </div>
+        <a href="/admin" className="w-9 h-9 shrink-0 rounded-xl grid place-items-center overflow-hidden">
+          <img src="/logo-roosta.png" alt="Roosta Logo" width={36} height={36} className="object-contain" />
+        </a>
         <div className="flex flex-col leading-tight">
           <span className="font-bold text-sm text-gray-800 tracking-wider">ROOSTA</span>
-          <span className="text-[10px] text-red-600 font-medium">Bàn số: {tableNumber}</span>
+          <span className="text-[10px] text-brand font-medium">Bàn số: {tableNumber}</span>
         </div>
       </div>
 

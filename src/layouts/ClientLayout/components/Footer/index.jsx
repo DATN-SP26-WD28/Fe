@@ -13,7 +13,7 @@ const NavItem = ({ icon, label, path, isActive, onClick }) => (
   <button
     onClick={onClick}
     className={`flex flex-col items-center gap-1 min-w-[56px] transition-colors ${
-      isActive ? 'text-red-600' : 'text-gray-400 hover:text-gray-600'
+      isActive ? 'text-brand' : 'text-gray-400 hover:text-gray-600'
     }`}
   >
     <span className="text-xl">{icon}</span>
@@ -42,10 +42,10 @@ const Footer = () => {
       <div className="relative -top-5">
         <button
           onClick={() => navigate('/cart')}
-          className="w-14 h-14 bg-red-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-red-200 border-4 border-white active:scale-90 transition-transform"
+          className="w-14 h-14 bg-brand rounded-full flex items-center justify-center text-white shadow-lg shadow-brand-light border-4 border-white active:scale-90 transition-transform"
         >
           <ShoppingCartOutlined className="text-2xl" />
-          <span className="absolute -top-1 -right-1 bg-yellow-400 text-red-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-white leading-none">
+          <span className="absolute -top-1 -right-1 bg-yellow-400 text-brand-dark text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-white leading-none">
             0
           </span>
         </button>

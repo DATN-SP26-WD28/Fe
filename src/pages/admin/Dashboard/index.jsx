@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react'
 import { Card, Statistic, Table, Tag, Progress, Avatar, List, Breadcrumb } from 'antd'
 
+const BRAND_COLOR = '#f07f29'
+
 const revenueData = [
   { key: '1', month: 'Jan', revenue: 12000, growth: 12 },
   { key: '2', month: 'Feb', revenue: 14500, growth: 8 },
@@ -64,7 +66,7 @@ function Sparkline({ values }) {
     .join(' ')
 
   return (
-    <svg viewBox="0 0 100 40" className="w-full h-10 text-red-500">
+    <svg viewBox="0 0 100 40" className="w-full h-10 text-brand">
       <polyline points={points} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   )
@@ -148,7 +150,7 @@ export default function Dashboard() {
         <Card className="shadow-sm rounded-2xl">
           <Statistic title="Tỷ lệ hoàn thành KPI" value={86} suffix="%" />
           <div className="mt-4">
-            <Progress percent={86} showInfo={false} strokeColor="#e11d48" />
+            <Progress percent={86} showInfo={false} strokeColor={BRAND_COLOR} />
           </div>
         </Card>
 
@@ -177,7 +179,7 @@ export default function Dashboard() {
               renderItem={(item) => (
                 <List.Item>
                   <List.Item.Meta
-                    avatar={<Avatar className="!bg-red-600">{item.user[0]}</Avatar>}
+                    avatar={<Avatar className="!bg-brand">{item.user[0]}</Avatar>}
                     title={
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-sm">
@@ -200,21 +202,21 @@ export default function Dashboard() {
                   <span>Website Revamp</span>
                   <span className="text-gray-500">72%</span>
                 </div>
-                <Progress percent={72} showInfo={false} strokeColor="#e11d48" />
+                <Progress percent={72} showInfo={false} strokeColor={BRAND_COLOR} />
               </div>
               <div>
                 <div className="flex items-center justify-between text-sm mb-1">
                   <span>Mobile App</span>
                   <span className="text-gray-500">43%</span>
                 </div>
-                <Progress percent={43} showInfo={false} strokeColor="#e11d48" />
+                <Progress percent={43} showInfo={false} strokeColor={BRAND_COLOR} />
               </div>
               <div>
                 <div className="flex items-center justify-between text-sm mb-1">
                   <span>Data Pipeline</span>
                   <span className="text-gray-500">90%</span>
                 </div>
-                <Progress percent={90} showInfo={false} strokeColor="#e11d48" />
+                <Progress percent={90} showInfo={false} strokeColor={BRAND_COLOR} />
               </div>
             </div>
           </Card>
