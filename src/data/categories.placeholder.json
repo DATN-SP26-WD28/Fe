@@ -1,0 +1,23 @@
+[
+  {
+    "key": "1",
+    "image": "https://picsum.photos/200/300",
+    "name": "Đồ ăn nhanh",
+    "description": "Các món ăn nhanh, tiện lợi.",
+    "status": "Active"
+  },
+  {
+    "key": "2",
+    "image": "https://picsum.photos/200/300",
+    "name": "Đồ uống",
+    "description": "Nước giải khát, sinh tố, trà sữa.",
+    "status": "Inactive"
+  },
+  {
+    "key": "3",
+    "image": "https://picsum.photos/200/300",
+    "name": "Món chính",
+    "description": "Các món ăn chính trong bữa.",
+    "status": "Active"
+  }
+]

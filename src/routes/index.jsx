@@ -1,7 +1,6 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { ConfigProvider } from 'antd'
 import AdminLayout from '../layouts/AdminLayout'
-// Client pages
-// ...
 // Admin pages
 import Dashboard from '@/pages/admin/Dashboard'
 import CategoryManagement from '@/pages/admin/CategoryManagement'
@@ -13,8 +12,9 @@ import ReviewManagement from '@/pages/admin/ReviewManagement'
 import StaffManagement from '@/pages/admin/StaffManagement'
 import UserManagement from '@/pages/admin/UserManagement'
 import ClientLayout from '@/layouts/ClientLayout'
+// Client pages
 import Home from '@/pages/Client/Home'
-import MenuInerface from '@/pages/Client/MenuInterface'
+import MenuInterface from '@/pages/Client/MenuInterface'
 import Login from '@/pages/Client/Login'
 import Register from '@/pages/Client/Register'
 
@@ -35,15 +35,28 @@ const AppRoutes = () => {
           <Route path="users" element={<UserManagement />} />
         </Route>
 
-
         {/* Client route */}
-        <Route path='/' element={<ClientLayout />}>
+        <Route
+          path='/'
+          element={
+            <ConfigProvider
+              theme={{
+                token: {
+                  colorPrimary: '#FA4A0C', // Cam Roosta
+                  borderRadius: 30,        // Bo góc lớn như thiết kế
+                  colorBgContainer: '#EFEEEE', // Màu nền xám nhẹ của Input trong ảnh
+                  fontFamily: "'Source Sans Pro', sans-serif",
+                },
+              }}
+            >
+              <ClientLayout />
+            </ConfigProvider>
+          }
+        >
           <Route index element={<Home />} />
-          <Route path="select-table" element={<MenuInerface />} />
+          <Route path="select-table" element={<MenuInterface />} />
           <Route path="login" element={<Login />} />
           <Route path="register" element={<Register />} />
-
-
         </Route>
       </Routes>
     </BrowserRouter>
