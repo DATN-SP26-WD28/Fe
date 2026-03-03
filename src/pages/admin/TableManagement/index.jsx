@@ -1,17 +1,34 @@
 import React from 'react'
-import { Card, Table, Tag, Breadcrumb } from 'antd'
+import { Card, Table, Tag, Breadcrumb, Button, QRCode } from 'antd'
+import { Edit, Trash2 } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { fetchCategoryList } from '@/services/category.service'
+import { truncateText } from '@/shared/utils/truncateText'
 
 const columns = [
   {
-    title: 'Mã đơn',
-    dataIndex: 'orderId',
-    key: 'orderId',
-    render: (v) => <span className="font-medium">{v}</span>,
+    title: 'Tên bàn ăn',
+    dataIndex: 'name',
+    key: 'name',
+    render: (v) => <span className="font-medium">{truncateText(v, 20)}</span>,
   },
   {
-    title: 'Khách hàng',
-    dataIndex: 'customer',
-    key: 'customer',
+    title: 'QR Code',
+    dataIndex: 'image',
+    key: 'image',
+    render: (value) => (
+      <QRCode
+        errorLevel="H"
+        value={value}
+        icon="/logo-roosta.png"
+      />
+    ),
+  },
+  {
+    title: 'Sức chứa',
+    dataIndex: 'description',
+    key: 'description',
+    width: 150,
   },
   {
     title: 'Trạng thái',
@@ -19,59 +36,42 @@ const columns = [
     key: 'status',
     render: (status) => {
       const map = {
-        Shipped: 'green',
-        Processing: 'blue',
-        Pending: 'gold',
-        Cancelled: 'red',
+        Active: 'green',
+        Inactive: 'red',
       }
       return <Tag color={map[status] || 'default'}>{status}</Tag>
     },
   },
-]
-
-const orders = [
   {
-    key: 'a1',
-    orderId: '#INV-1042',
-    customer: 'Nguyen Van A',
-    status: 'Shipped',
-    total: 2450000,
-  },
-  {
-    key: 'a2',
-    orderId: '#INV-1043',
-    customer: 'Tran Thi B',
-    status: 'Pending',
-    total: 990000,
-  },
-  {
-    key: 'a3',
-    orderId: '#INV-1044',
-    customer: 'Le Van C',
-    status: 'Cancelled',
-    total: 0,
-  },
-  {
-    key: 'a5',
-    orderId: '#INV-1045',
-    customer: 'Pham D',
-    status: 'Processing',
-    total: 1200000,
+    title: 'Hành động',
+    key: 'action',
+    render: (_, record) => (
+      <span className="flex gap-2">
+        <Button type="text" icon={<Edit size={18} />} title="Sửa" className="text-blue-500" />
+        <Button type="text" icon={<Trash2 size={18} />} title="Xóa" className="text-red-500" />
+      </span>
+    ),
   },
 ]
 
 const TableManagement = () => {
+  const { data: categories = [], isLoading } = useQuery({
+    queryKey: ['categories'],
+    queryFn: fetchCategoryList,
+  })
+
   return (
     <>
       <section className="mb-3">
-        <h1 className="font-bold text-3xl mb-2">Quản lý bàn</h1>
-        <Breadcrumb items={[{ title: 'Trang chủ' }, { title: 'Quản lý bàn' }]} />
+        <h1 className="font-bold text-3xl mb-2">Quản lý bàn ăn</h1>
+        <Breadcrumb items={[{ title: 'Trang chủ' }, { title: 'Quản lý bàn ăn' }]} />
       </section>
 
-      <Card className="shadow-sm rounded-2xl xl:col-span-2" title="Đơn hàng gần đây">
+      <Card className="shadow-sm rounded-2xl xl:col-span-2" title="Danh sách bàn ăn">
         <Table
           columns={columns}
-          dataSource={orders}
+          dataSource={categories}
+          loading={isLoading}
           pagination={{ pageSize: 5 }}
           className="rounded-xl"
         />
