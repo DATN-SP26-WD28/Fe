@@ -47,7 +47,6 @@ const Footer = () => {
         <NavItem icon={<HomeOutlined />} label="Trang chủ" path="/" />
         <NavItem icon={<FileTextOutlined />} label="Đã gọi" path="/orders" onClick={() => setShowOrders(true)} />
 
-        {/* Nút Giỏ hàng nổi bật */}
         <div className="relative -top-5" onClick={() => navigate('/cart')}>
           <div className="w-14 h-14 bg-red-600 rounded-full flex items-center justify-center text-white shadow-lg border-4 border-white active:scale-90 transition-transform">
             <ShoppingCartOutlined className="text-2xl" />
@@ -57,7 +56,7 @@ const Footer = () => {
           </div>
         </div>
 
-        <NavItem icon={<CustomerServiceOutlined />} label="Hỗ trợ" path="/support" />
+        <NavItem icon={<CustomerServiceOutlined />} label="Hỗ trợ" path="/contact" />
         <NavItem icon={<UserOutlined />} label="Cá nhân" path="/profile" />
       </nav>
 

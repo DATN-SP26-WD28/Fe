@@ -17,6 +17,7 @@ import Home from '@/pages/Client/Home'
 import MenuInerface from '@/pages/Client/MenuInterface'
 import Login from '@/pages/Client/Login'
 import Register from '@/pages/Client/Register'
+import Contact from '@/pages/Client/Contact'
 
 const AppRoutes = () => {
   return (
@@ -42,6 +43,7 @@ const AppRoutes = () => {
           <Route path="select-table" element={<MenuInerface />} />
           <Route path="login" element={<Login />} />
           <Route path="register" element={<Register />} />
+          <Route path="/contact" element={<Contact />} />
 
 
         </Route>
