@@ -4,6 +4,7 @@ import { Edit, Trash2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchCategoryList } from '@/services/category.service'
 import { truncateText } from '@/shared/utils/truncateText'
+import { getTableLink } from '@/shared/utils/utils'
 
 const columns = [
   {
@@ -14,15 +15,19 @@ const columns = [
   },
   {
     title: 'QR Code',
-    dataIndex: 'image',
-    key: 'image',
-    render: (value) => (
-      <QRCode
-        errorLevel="H"
-        value={value}
-        icon="/logo-roosta.png"
-      />
-    ),
+    dataIndex: 'tableId',
+    key: 'qrcode',
+    render: (_, record) => {
+      const { tableId, code } = record;
+      const qrValue = getTableLink(tableId, code);
+      return (
+        <QRCode
+          errorLevel="H"
+          value={qrValue}
+          icon="/logo-roosta.png"
+        />
+      );
+    },
   },
   {
     title: 'Sức chứa',
@@ -45,7 +50,7 @@ const columns = [
   {
     title: 'Hành động',
     key: 'action',
-    render: (_, record) => (
+    render: () => (
       <span className="flex gap-2">
         <Button type="text" icon={<Edit size={18} />} title="Sửa" className="text-blue-500" />
         <Button type="text" icon={<Trash2 size={18} />} title="Xóa" className="text-red-500" />

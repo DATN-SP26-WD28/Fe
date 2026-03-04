@@ -1,0 +1,37 @@
+[
+  {
+    "tableId": "T01",
+    "name": "Bàn 1",
+    "description": "4 người",
+    "status": "Active",
+    "code": "abc123"
+  },
+  {
+    "tableId": "T02",
+    "name": "Bàn 2",
+    "description": "6 người",
+    "status": "Inactive",
+    "code": "def456"
+  },
+  {
+    "tableId": "T03",
+    "name": "Bàn 3",
+    "description": "2 người",
+    "status": "Active",
+    "code": "ghi789"
+  },
+  {
+    "tableId": "T04",
+    "name": "Bàn 4",
+    "description": "8 người",
+    "status": "Active",
+    "code": "jkl012"
+  },
+  {
+    "tableId": "T05",
+    "name": "Bàn 5",
+    "description": "10 người",
+    "status": "Inactive",
+    "code": "mno345"
+  }
+]
