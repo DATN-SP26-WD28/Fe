@@ -1,0 +1,1 @@
+// ProtectedRoute is a wrapper for <Route> that redirects to the login

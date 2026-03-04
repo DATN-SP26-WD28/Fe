@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import AdminLayout from '../layouts/AdminLayout'
 // Admin pages
 import Dashboard from '@/pages/admin/Dashboard'
@@ -21,6 +21,18 @@ const AppRoutes = () => {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Client layout (Public) */}
+        <Route path="/" element={<ClientLayout />}>
+          <Route index element={<Home />} />
+          <Route path="login" element={<Login />} />
+          <Route path="register" element={<Register />} />
+          {/* Xử lý sau */}
+          <Route path="select-table" element={<MenuInterface />} />
+        </Route>
+        {/* Route này dành cho khách quét QR: /tables/:tableId */}
+        <Route path="/tables" element={<ClientLayout />}>
+          <Route path=":tableId" element={<MenuInterface />} />
+        </Route>
         {/* Admin layout */}
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Dashboard />} />
@@ -33,14 +45,10 @@ const AppRoutes = () => {
           <Route path="staffs" element={<StaffManagement />} />
           <Route path="users" element={<UserManagement />} />
         </Route>
-
-        {/* Client layout */}
-        <Route path="/" element={<ClientLayout />}>
-          <Route index element={<Home />} />
-          <Route path="select-table" element={<MenuInterface />} />
-          <Route path="login" element={<Login />} />
-          <Route path="register" element={<Register />} />
-        </Route>
+        {/* Global Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/error/404" element={<div className="p-10 text-center">404 - Page not found</div>} />
+        <Route path="/error/invalid-qr" element={<div className="p-10 text-center">QR Code không hợp lệ</div>} />
       </Routes>
     </BrowserRouter>
   )

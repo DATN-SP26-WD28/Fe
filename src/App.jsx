@@ -1,5 +1,5 @@
 import { ConfigProvider } from 'antd'
-import AppRoutes from './routes'
+import AppRoutes from './routes/AppRouters'
 
 const BRAND_COLOR = '#f07f29'
 
