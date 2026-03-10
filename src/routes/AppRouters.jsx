@@ -16,6 +16,7 @@ import Home from '@/pages/Client/Home'
 import MenuInterface from '@/pages/Client/MenuInterface'
 import Login from '@/pages/Client/Login'
 import Register from '@/pages/Client/Register'
+import Contact from '@/pages/Client/Contact'
 
 const AppRoutes = () => {
   return (
@@ -25,6 +26,10 @@ const AppRoutes = () => {
         <Route path="/" element={<ClientLayout />}>
           <Route index element={<Home />} />
           <Route path="select-table" element={<MenuInterface />} />
+          <Route path="contact" element={<Contact />} />
+          <Route path="profile" element={<div className="p-10 text-center">Profile Coming Soon</div>} />
+          <Route path="cart" element={<div className="p-10 text-center">Cart Coming Soon</div>} />
+          <Route path="orders" element={<div className="p-10 text-center">Orders Coming Soon</div>} />
         </Route>
         {/* Authentication routes */}
         <Route path="/auth">
