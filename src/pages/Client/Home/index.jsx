@@ -48,7 +48,7 @@ const Home = () => {
 
                     {/* Nút Đăng nhập cho Thành viên */}
                     <button
-                        onClick={() => navigate('/login')}
+                        onClick={() => navigate('/auth/login')}
                         className="w-full bg-white border-2 border-gray-100 hover:border-brand-light text-gray-700 p-5 rounded-2xl flex items-center justify-between transition-all active:scale-95 shadow-sm"
                     >
                         <div className="flex items-center gap-4">

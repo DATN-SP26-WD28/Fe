@@ -24,10 +24,12 @@ const AppRoutes = () => {
         {/* Client layout (Public) */}
         <Route path="/" element={<ClientLayout />}>
           <Route index element={<Home />} />
+          <Route path="select-table" element={<MenuInterface />} />
+        </Route>
+        {/* Authentication routes */}
+        <Route path="/auth">
           <Route path="login" element={<Login />} />
           <Route path="register" element={<Register />} />
-          {/* Xử lý sau */}
-          <Route path="select-table" element={<MenuInterface />} />
         </Route>
         {/* Route này dành cho khách quét QR: /tables/:tableId */}
         <Route path="/tables" element={<ClientLayout />}>
