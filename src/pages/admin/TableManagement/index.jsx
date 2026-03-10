@@ -8,15 +8,10 @@ import { getTableLink } from '@/shared/utils/utils'
 
 const columns = [
   {
-    title: 'Tên bàn ăn',
-    dataIndex: 'name',
-    key: 'name',
-    render: (v) => <span className="font-medium">{truncateText(v, 20)}</span>,
-  },
-  {
     title: 'QR Code',
     dataIndex: 'tableId',
     key: 'qrcode',
+    width: 200,
     render: (_, record) => {
       const { tableId, code } = record;
       const qrValue = getTableLink(tableId, code);
@@ -30,10 +25,15 @@ const columns = [
     },
   },
   {
+    title: 'Tên bàn ăn',
+    dataIndex: 'name',
+    key: 'name',
+    render: (v) => <span className="font-medium">{truncateText(v, 20)}</span>,
+  },
+  {
     title: 'Sức chứa',
     dataIndex: 'description',
     key: 'description',
-    width: 150,
   },
   {
     title: 'Trạng thái',
