@@ -16,7 +16,6 @@ import UserManagement from '@/pages/admin/UserManagement'
 // Guest pages
 import {
   CallStaffPage,
-  CartPage,
   CustomerPage,
   MenuPage,
   OrderDetailPage,
@@ -44,11 +43,10 @@ const AppRoutes = () => {
           <Route path="orders" element={<div className="p-10 text-center">Orders Coming Soon</div>} />
         </Route>
         {/* Guest: Khách hàng quét QR */}
-        <Route path="/order/:tableId" element={<GuestLayout />}>
+        <Route path="/table/:tableId" element={<GuestLayout />}>
           <Route index element={<Navigate to="customer" />} />
           <Route path="customer" element={<CustomerPage />} />
           <Route path="menu" element={<MenuPage />} />
-          <Route path="cart" element={<CartPage />} />
           <Route path="orders" element={<OrdersPage />} />
           <Route path="orders/:orderId" element={<OrderDetailPage />} />
           <Route path="payment" element={<PaymentPage />} />
