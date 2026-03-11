@@ -1,5 +1,8 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+// Layouts
 import AdminLayout from '../layouts/AdminLayout'
+import ClientLayout from '@/layouts/ClientLayout'
+import GuestLayout from '@/layouts/GuestLayout'
 // Admin pages
 import Dashboard from '@/pages/admin/Dashboard'
 import CategoryManagement from '@/pages/admin/CategoryManagement'
@@ -10,7 +13,16 @@ import PaymentAndBill from '@/pages/admin/PaymentAndBill'
 import ReviewManagement from '@/pages/admin/ReviewManagement'
 import StaffManagement from '@/pages/admin/StaffManagement'
 import UserManagement from '@/pages/admin/UserManagement'
-import ClientLayout from '@/layouts/ClientLayout'
+// Guest pages
+import {
+  CallStaffPage,
+  CartPage,
+  CustomerPage,
+  MenuPage,
+  OrderDetailPage,
+  OrdersPage,
+  PaymentPage,
+} from '@/pages/guest'
 // Client pages
 import Home from '@/pages/Client/Home'
 import MenuInterface from '@/pages/Client/MenuInterface'
@@ -22,7 +34,7 @@ const AppRoutes = () => {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Client layout (Public) */}
+        {/* Client: Khách hàng tham khảo trang web */}
         <Route path="/" element={<ClientLayout />}>
           <Route index element={<Home />} />
           <Route path="select-table" element={<MenuInterface />} />
@@ -31,16 +43,18 @@ const AppRoutes = () => {
           <Route path="cart" element={<div className="p-10 text-center">Cart Coming Soon</div>} />
           <Route path="orders" element={<div className="p-10 text-center">Orders Coming Soon</div>} />
         </Route>
-        {/* Authentication routes */}
-        <Route path="/auth">
-          <Route path="login" element={<Login />} />
-          <Route path="register" element={<Register />} />
+        {/* Guest: Khách hàng quét QR */}
+        <Route path="/order/:tableId" element={<GuestLayout />}>
+          <Route index element={<Navigate to="customer" />} />
+          <Route path="customer" element={<CustomerPage />} />
+          <Route path="menu" element={<MenuPage />} />
+          <Route path="cart" element={<CartPage />} />
+          <Route path="orders" element={<OrdersPage />} />
+          <Route path="orders/:orderId" element={<OrderDetailPage />} />
+          <Route path="payment" element={<PaymentPage />} />
+          <Route path="call-staff" element={<CallStaffPage />} />
         </Route>
-        {/* Route này dành cho khách quét QR: /tables/:tableId */}
-        <Route path="/tables" element={<ClientLayout />}>
-          <Route path=":tableId" element={<MenuInterface />} />
-        </Route>
-        {/* Admin layout */}
+        {/* Admin: Quản trị viên */}
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="categories" element={<CategoryManagement />} />
@@ -51,6 +65,11 @@ const AppRoutes = () => {
           <Route path="reviews" element={<ReviewManagement />} />
           <Route path="staffs" element={<StaffManagement />} />
           <Route path="users" element={<UserManagement />} />
+        </Route>
+        {/* Authentication routes */}
+        <Route path="/auth">
+          <Route path="login" element={<Login />} />
+          <Route path="register" element={<Register />} />
         </Route>
         {/* Global Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
