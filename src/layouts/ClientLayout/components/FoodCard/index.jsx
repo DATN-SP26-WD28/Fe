@@ -5,7 +5,7 @@ const FoodCard = ({ image, name, description, price, onAdd }) => {
   return (
     <div className={[
       // Mobile: horizontal row with bottom border divider
-      'flex gap-3 pb-4 border-b border-gray-100 last:border-b-0',
+      'flex gap-3 border-b border-gray-100 last:border-b-0',
       // Tablet+: vertical card
       'md:flex-col md:gap-0 md:pb-0 md:border-0',
       'md:rounded-2xl md:overflow-hidden md:bg-white',
