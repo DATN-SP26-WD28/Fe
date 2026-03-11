@@ -104,7 +104,7 @@ const MenuPage = () => {
 
   return (
     <>
-      <nav className="md:hidden sticky top-0 z-10 flex overflow-x-auto scrollbar-hide bg-white border-b border-gray-100 shrink-0">
+      <nav className="md:hidden sticky top-14 z-10 flex overflow-x-auto scrollbar-hide bg-white border-b border-gray-100 shrink-0">
         {CATEGORIES.map((item, index) => (
           <button
             key={index}
