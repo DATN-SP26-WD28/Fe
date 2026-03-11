@@ -1,5 +1,9 @@
 import FoodCard from '@/layouts/ClientLayout/components/FoodCard';
+import CartModal from '@/components/CartModal';
+import CartSummaryBar from '@/components/CartSummaryBar';
 import React, { useRef, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { addItem } from '@/redux/slices/cart.slices';
 
 const CATEGORIES = ['Món đặc sắc', 'Nước lẩu', 'Thịt bò & Cừu', 'Hải sản', 'Rau củ', 'Đồ uống'];
 
@@ -78,11 +82,24 @@ const MOCK_DISHES = [
 
 const MenuPage = () => {
   const [activeTab, setActiveTab] = useState(0);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const mobilTabRefs = useRef([]);
+  const dispatch = useDispatch();
+  const { items: cartItems } = useSelector((state) => state.cart);
 
   const handleMobileTabChange = (index) => {
     setActiveTab(index);
     mobilTabRefs.current[index]?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  };
+
+  const handleAddItem = (dish) => {
+    dispatch(addItem({
+      id: dish.id,
+      name: dish.name,
+      price: dish.price,
+      image: dish.image,
+      description: dish.description,
+    }));
   };
 
   return (
@@ -104,7 +121,7 @@ const MenuPage = () => {
         ))}
       </nav>
 
-      <div className="max-w-[1280px] mx-auto w-full px-3 py-3 md:px-6 md:py-6 lg:px-8 lg:py-8">
+      <div className="max-w-[1280px] mx-auto w-full px-3 py-3 md:px-6 md:py-6 lg:px-8 lg:py-8" style={{ paddingBottom: cartItems.length > 0 ? '120px' : '0' }}>
         <div className="hidden md:flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1 mb-6">
           {CATEGORIES.map((item, index) => (
             <button
@@ -138,12 +155,25 @@ const MenuPage = () => {
                 name={dish.name}
                 description={dish.description}
                 price={dish.price}
-                onAdd={() => {}}
+                onAdd={() => handleAddItem(dish)}
               />
             </div>
           ))}
         </div>
       </div>
+
+      {/* Cart Summary Bar - Sticky Bottom */}
+      <CartSummaryBar 
+        items={cartItems} 
+        onClick={() => setIsModalOpen(true)}
+      />
+
+      {/* Cart Modal */}
+      <CartModal 
+        items={cartItems} 
+        isModalOpen={isModalOpen}
+        onCloseModal={() => setIsModalOpen(false)}
+      />
     </>
   );
 };
