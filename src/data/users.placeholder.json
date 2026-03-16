@@ -1,0 +1,51 @@
+[
+  {
+    "key": "1",
+    "name": "Nhân viên bàn",
+    "email": "waiter@gmail.com",
+    "phone": "0904837461",
+    "role": "waiter"
+  },
+  {
+    "key": "2",
+    "name": "Thu ngân",
+    "email": "cashier@gmail.com",
+    "phone": "0904837461",
+    "role": "cashier"
+  },
+  {
+    "key": "3",
+    "name": "Bếp",
+    "email": "chef@gmail.com",
+    "phone": "0904837461",
+    "role": "chef"
+  },
+  {
+    "key": "4",
+    "name": "Admin",
+    "email": "admin@gmail.com",
+    "phone": "0987654321",
+    "role": "admin"
+  },
+  {
+    "key": "5",
+    "name": "Thu Hiền",
+    "email": "vtnhu@gmail.com",
+    "phone": "0123456789",
+    "role": "customer"
+  },
+  {
+    "key": "6",
+    "name": "ducanh",
+    "email": "ducanhnguyen1925@gmail.com",
+    "phone": "0913398777",
+    "role": "customer"
+  },
+  {
+    "key": "7",
+    "name": "Thu Hường",
+    "email": "bthuong@gmail.com",
+    "phone": "0333887869",
+    "role": "customer"
+  }
+]
