@@ -43,9 +43,8 @@ const AppRoutes = () => {
           <Route path="orders" element={<div className="p-10 text-center">Orders Coming Soon</div>} />
         </Route>
         {/* Guest: Khách hàng quét QR */}
-        <Route path="/table/:tableId" element={<GuestLayout />}>
-          <Route index element={<Navigate to="customer" />} />
-          <Route path="customer" element={<CustomerPage />} />
+        <Route path="/table/:tableId" element={<CustomerPage />}/>
+        <Route path="/table-order/:tableId" element={<GuestLayout />}>
           <Route path="menu" element={<MenuPage />} />
           <Route path="orders" element={<OrdersPage />} />
           <Route path="orders/:orderId" element={<OrderDetailPage />} />

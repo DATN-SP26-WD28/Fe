@@ -135,7 +135,7 @@ const TableManagement = () => {
               Link
             </Button>
           </div>
-          {qrCode && <small className="text-gray-400 text-[10px] break-all max-w-[120px] text-center">{qrCode.replace('https://', '')}</small>}
+          {qrCode && <small className="text-sm text-gray-500">{qrCode}</small>}
         </div>
       ),
     },
@@ -143,7 +143,7 @@ const TableManagement = () => {
       title: 'Số bàn',
       dataIndex: 'table_number',
       key: 'table_number',
-      render: (v) => <span className="font-bold text-lg text-blue-600">Bàn số {v}</span>,
+      render: (v) => <span className="font-bold text-lg text-orange-500">Bàn số {v}</span>,
     },
     {
       title: 'Sức chứa',
