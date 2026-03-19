@@ -1,20 +1,9 @@
 import React, { useState } from 'react'
-import {
-  Card,
-  Table,
-  Tag,
-  Breadcrumb,
-  Button,
-  Modal,
-  Form,
-  Input,
-  Select,
-  Popconfirm,
-  Space,
-} from 'antd'
+import { Card, Table, Tag, Breadcrumb, Button, Form, Popconfirm, Space, message } from 'antd'
 import { Edit, Trash2, Plus } from 'lucide-react'
-
-import usersPlaceholder from '@/data/users.placeholder.json'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { fetchUsers, deleteUser, createUser, updateUser } from '@/configs/user.api'
+import UserForm from './UserForm'
 
 const roleLabelMap = {
   admin: { label: 'Quản trị viên', color: 'geekblue' },
@@ -25,10 +14,50 @@ const roleLabelMap = {
 }
 
 const UserManagement = () => {
-  const [users, setUsers] = useState(() => usersPlaceholder)
+  const queryClient = useQueryClient()
   const [visibleModal, setVisibleModal] = useState(false)
   const [editingUser, setEditingUser] = useState(null)
   const [form] = Form.useForm()
+
+  const { data: users = [], isLoading } = useQuery({
+    queryKey: ['users'],
+    queryFn: fetchUsers,
+  })
+
+  const createMutation = useMutation({
+    mutationFn: createUser,
+    onSuccess: () => {
+      message.success('Thêm người dùng thành công')
+      handleCancel()
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+    },
+    onError: (err) => {
+      message.error(err.response?.data?.message || 'Tạo người dùng thất bại')
+    },
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => updateUser(id, data),
+    onSuccess: () => {
+      message.success('Cập nhật người dùng thành công')
+      handleCancel()
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+    },
+    onError: (err) => {
+      message.error(err.response?.data?.message || 'Cập nhật thất bại')
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => deleteUser(id),
+    onSuccess: () => {
+      message.success('Xóa người dùng thành công')
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+    },
+    onError: (err) => {
+      message.error(err.response?.data?.message || 'Xóa thất bại')
+    },
+  })
 
   const openCreateModal = () => {
     setEditingUser(null)
@@ -48,7 +77,7 @@ const UserManagement = () => {
   }
 
   const onDelete = (id) => {
-    setUsers((prev) => prev.filter((item) => item.key !== id))
+    deleteMutation.mutate(id)
   }
 
   const columns = [
@@ -100,7 +129,7 @@ const UserManagement = () => {
             title="Xác nhận xóa người dùng này?"
             okText="Xóa"
             cancelText="Hủy"
-            onConfirm={() => onDelete(record.key)}
+            onConfirm={() => onDelete(record.key ?? record.id)}
           >
             <Button type="text" icon={<Trash2 size={18} />} title="Xóa" className="text-red-500" />
           </Popconfirm>
@@ -109,26 +138,13 @@ const UserManagement = () => {
     },
   ]
 
-  const handleOk = async () => {
-    const values = await form.validateFields()
-
+  const onFinish = (values) => {
     if (editingUser) {
-      setUsers((prev) =>
-        prev.map((item) => (item.key === editingUser.key ? { ...item, ...values } : item))
-      )
+      const id = editingUser.key ?? editingUser.id
+      updateMutation.mutate({ id, data: values })
     } else {
-      setUsers((prev) => [
-        ...prev,
-        {
-          key: `${Date.now()}`,
-          ...values,
-        },
-      ])
+      createMutation.mutate(values)
     }
-
-    setVisibleModal(false)
-    setEditingUser(null)
-    form.resetFields()
   }
 
   const handleCancel = () => {
@@ -154,60 +170,21 @@ const UserManagement = () => {
         <Table
           columns={columns}
           dataSource={users}
+          rowKey={(record) => record.key ?? record.id}
+          loading={isLoading}
           pagination={{ pageSize: 7 }}
           className="rounded-xl"
         />
       </Card>
 
-      <Modal
-        title={editingUser ? 'Cập nhật người dùng' : 'Thêm người dùng'}
-        open={visibleModal}
-        onOk={handleOk}
-        onCancel={handleCancel}
-        okText="Lưu"
-        cancelText="Hủy"
-        destroyOnClose
-      >
-        <Form form={form} layout="vertical" initialValues={{ role: 'customer' }}>
-          <Form.Item
-            label="Tên người dùng"
-            name="name"
-            rules={[{ required: true, message: 'Vui lòng nhập tên người dùng' }]}
-          >
-            <Input placeholder="Nhập tên" />
-          </Form.Item>
-
-          <Form.Item
-            label="Email"
-            name="email"
-            rules={[
-              { required: true, message: 'Vui lòng nhập email' },
-              { type: 'email', message: 'Email không hợp lệ' },
-            ]}
-          >
-            <Input placeholder="Nhập email" />
-          </Form.Item>
-
-          <Form.Item
-            label="Số điện thoại"
-            name="phone"
-            rules={[{ required: true, message: 'Vui lòng nhập số điện thoại' }]}
-          >
-            <Input placeholder="Nhập số điện thoại" />
-          </Form.Item>
-
-          <Form.Item
-            label="Vai trò"
-            name="role"
-            rules={[{ required: true, message: 'Vui lòng chọn vai trò' }]}
-          >
-            <Select options={Object.entries(roleLabelMap).map(([value, { label }]) => ({
-              value,
-              label,
-            }))} />
-          </Form.Item>
-        </Form>
-      </Modal>
+      <UserForm
+        isModalOpen={visibleModal}
+        handleCancel={handleCancel}
+        onFinish={onFinish}
+        editingUser={editingUser}
+        form={form}
+        confirmLoading={createMutation.isPending || updateMutation.isPending}
+      />
     </>
   )
 }
