@@ -35,16 +35,16 @@ const TableForm = ({
               label="Tên bàn (Số bàn)"
               rules={[{ required: true, message: 'Vui lòng nhập số bàn' }]}
             >
-              <InputNumber className="w-full" min={1} placeholder="Ví dụ: 10" />
+              <InputNumber className="w-full!" min={1} placeholder="Ví dụ: 10" />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item
               name="capacity"
-              label="Sức chứa (Số người)"
+              label="Sức chứa (người)"
               rules={[{ required: true, message: 'Vui lòng nhập sức chứa' }]}
             >
-              <InputNumber className="w-full" min={1} placeholder="Ví dụ: 4" />
+              <InputNumber className="w-full!" min={1} placeholder="Ví dụ: 4" />
             </Form.Item>
           </Col>
         </Row>
