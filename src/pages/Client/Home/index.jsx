@@ -1,18 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import { ArrowRightOutlined, LogoutOutlined, QrcodeOutlined, UserOutlined, WalletOutlined } from '@ant-design/icons';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { QrcodeOutlined, UserOutlined, ArrowRightOutlined, WalletOutlined, LogoutOutlined } from '@ant-design/icons';
 
 const Home = () => {
     const navigate = useNavigate();
-    const [user, setUser] = useState(null);
+   // Dùng Lazy Initializer (truyền 1 function vào useState)
+const [user, setUser] = useState(() => {
+  const savedUser = localStorage.getItem('user');
+  return savedUser ? JSON.parse(savedUser) : null;
+});
 
-    useEffect(() => {
-        // Kiểm tra xem có user trong localStorage không
-        const savedUser = localStorage.getItem('user');
-        if (savedUser) {
-            setUser(JSON.parse(savedUser));
-        }
-    }, []);
+// XÓA BỎ cái useEffect cũ (cái đoạn từ dòng 10-15 trong ảnh của bạn)
 
     const handleLogout = () => {
         localStorage.removeItem('token');

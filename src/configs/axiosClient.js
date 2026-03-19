@@ -10,7 +10,7 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
   (config) => {
     // Do something before request is sent
-    const token = localStorage.getItem('userToken') // Example: Get token from localStorage
+    const token = localStorage.getItem('token') // Example: Get token from localStorage
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }

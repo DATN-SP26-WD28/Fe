@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 
 const Header = () => {
   const [searchParams] = useSearchParams();
-  const [tableNumber, setTableNumber] = useState(localStorage.getItem('roosta_table') || '??');
+  const [tableNum, setTableNumber] = useState(localStorage.getItem('roosta_table') || '??');
 
   useEffect(() => {
     const tableFromUrl = searchParams.get('table');
@@ -21,7 +21,7 @@ const Header = () => {
         </a>
         <div className="flex flex-col leading-tight">
           <span className="font-bold text-sm text-gray-800 tracking-wider">ROOSTA</span>
-          <span className="text-[10px] text-brand font-medium">Bàn số: {tableNumber}</span>
+          <span className="text-[10px] text-brand font-medium">Bàn số: {tableNum}</span>
         </div>
       </div>
 

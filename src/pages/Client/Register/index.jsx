@@ -3,7 +3,7 @@ import { Form, Input, Button, message } from 'antd';
 import { UserOutlined, MailOutlined, LockOutlined, PhoneOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useNavigate, Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
-import { registerUser } from '@/services/auth.service';
+import { registerUser } from '@/configs/user.api';
 
 const Register = () => {
   const navigate = useNavigate();

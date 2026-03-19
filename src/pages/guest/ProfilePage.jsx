@@ -13,7 +13,7 @@ import {
     RightOutlined
 } from '@ant-design/icons';
 import { Avatar, Button, Spin, message, Modal } from 'antd';
-import { getMe } from '@/services/auth.service';
+import { getMe } from '@/configs/user.api';
 
 const Profile = () => {
     const navigate = useNavigate();
