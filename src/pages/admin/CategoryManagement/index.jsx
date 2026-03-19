@@ -1,144 +1,154 @@
 import React, { useState } from 'react'
-import { Card, Table, Tag, Breadcrumb, Button, Input } from 'antd'
-import { toast } from 'react-toastify'
-import { Edit, Trash2 } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
-import { fetchCategoryList, updateCategory, deleteCategory } from '@/services/category.service'
-import { truncateText } from '@/shared/utils/truncateText'
-import { CATEGORY_PLACEHOLDER_IMG } from '@/assets/images'
-import ReusableFormModal from '@/components/ReusableFormModal'
-
-const categoryFormSchema = [
-  {
-    name: 'name',
-    label: 'Tên danh mục',
-    rules: [{ required: true, message: 'Vui lòng nhập tên danh mục' }],
-  },
-  {
-    name: 'description',
-    label: 'Mô tả',
-    render: () => <Input.TextArea rows={3} />,
-  },
-];
-
-const getColumns = (onEdit, onDelete) => [
-  {
-    title: 'Hình ảnh',
-    dataIndex: 'image',
-    key: 'image',
-    render: (src) => (
-      <img
-        src={src || CATEGORY_PLACEHOLDER_IMG}
-        alt="category"
-        style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 8 }}
-        onError={e => { e.target.onerror = null; e.target.src = CATEGORY_PLACEHOLDER_IMG; }}
-      />
-    ),
-    width: 150,
-  },
-  {
-    title: 'Tên danh mục',
-    dataIndex: 'name',
-    key: 'name',
-    render: (v) => <span className="font-medium">{truncateText(v, 20)}</span>,
-  },
-  {
-    title: 'Mô tả sản phẩm',
-    dataIndex: 'description',
-    key: 'description',
-  },
-  {
-    title: 'Trạng thái',
-    dataIndex: 'status',
-    key: 'status',
-    render: (status) => {
-      const map = {
-        Active: 'green',
-        Inactive: 'red',
-      }
-      return <Tag color={map[status] || 'default'}>{status}</Tag>
-    },
-  },
-  {
-    title: 'Hành động',
-    key: 'action',
-    render: (_, record) => (
-      <span className="flex gap-2">
-        <Button type="text" icon={<Edit size={18} />} title="Sửa" className="text-blue-500" onClick={() => onEdit(record)} />
-        <Button type="text" icon={<Trash2 size={18} />} title="Xóa" className="text-red-500" onClick={() => onDelete(record)} />
-      </span>
-    ),
-  },
-];
+import { Card, Table, Tag, Breadcrumb, Button, message, Popconfirm, Form, Avatar } from 'antd'
+import { Edit, Trash2, Plus } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import categoryAPI from '@/configs/category.api'
+import CategoryForm from './CategoryForm'
 
 const CategoryManagement = () => {
-  const { data: categories = [], isLoading, refetch } = useQuery({
+  const queryClient = useQueryClient()
+  const [form] = Form.useForm()
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingCategory, setEditingCategory] = useState(null)
+
+  const { data: categories = [], isLoading } = useQuery({
     queryKey: ['categories'],
-    queryFn: fetchCategoryList,
-  });
+    queryFn: () => categoryAPI.getAll(),
+  })
 
-  const [modalVisible, setModalVisible] = useState(false);
-  const [modalMode, setModalMode] = useState('update');
-  const [modalInitialValues, setModalInitialValues] = useState({});
+  const createMutation = useMutation({
+    mutationFn: (payload) => categoryAPI.create(payload),
+    onSuccess: () => {
+      message.success('Thêm danh mục thành công')
+      handleCancel()
+      queryClient.invalidateQueries({ queryKey: ['categories'] })
+    },
+    onError: (err) => message.error(err?.response?.data?.message || 'Thêm thất bại'),
+  })
 
-  const handleEdit = (record) => {
-    setModalMode('update');
-    setModalInitialValues(record);
-    setModalVisible(true);
-  };
-  const handleDelete = async (record) => {
-    await deleteCategory(record.id);
-    toast.success('Đã xóa danh mục');
-    refetch();
-  };
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => categoryAPI.update(id, data),
+    onSuccess: () => {
+      message.success('Cập nhật danh mục thành công')
+      handleCancel()
+      queryClient.invalidateQueries({ queryKey: ['categories'] })
+    },
+    onError: (err) => message.error(err?.response?.data?.message || 'Cập nhật thất bại'),
+  })
 
-  const handleModalOk = async (values) => {
-    if (modalMode === 'update') {
-      await updateCategory(modalInitialValues.id, values);
-      toast.success('Cập nhật thành công');
-      refetch();
+  const deleteMutation = useMutation({
+    mutationFn: (id) => categoryAPI.delete(id),
+    onSuccess: () => {
+      message.success('Xóa danh mục thành công')
+      queryClient.invalidateQueries({ queryKey: ['categories'] })
+    },
+    onError: (err) => message.error(err?.response?.data?.message || 'Xóa thất bại'),
+  })
+
+  const showModal = (record = null) => {
+    setEditingCategory(record)
+    if (record) form.setFieldsValue(record)
+    else form.resetFields()
+    setIsModalOpen(true)
+  }
+
+  const handleCancel = () => {
+    setIsModalOpen(false)
+    setEditingCategory(null)
+    form.resetFields()
+  }
+
+  const onFinish = (values) => {
+    if (editingCategory) {
+      const id = editingCategory._id || editingCategory.key || editingCategory.id
+      updateMutation.mutate({ id, data: values })
+    } else {
+      createMutation.mutate(values)
     }
-    setModalVisible(false);
-  };
+  }
+
+  const columns = [
+    {
+      title: 'Ảnh',
+      dataIndex: 'image',
+      key: 'image',
+      width: 200,
+      render: (src) => <Avatar src={src} shape="square" size={150} />,
+    },
+    {
+      title: 'Tên danh mục',
+      dataIndex: 'name',
+      key: 'name',
+      render: (v) => <strong>{v}</strong>,
+    },
+    {
+      title: 'Mô tả',
+      dataIndex: 'description',
+      key: 'description',
+      render: (v) => <span>{v || '-'}</span>,
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status) => {
+        const map = {
+          Active: { color: 'green', text: 'Hoạt động' },
+          Inactive: { color: 'default', text: 'Không hoạt động' },
+        }
+        const cfg = map[status] || { color: 'default', text: status }
+        return <Tag color={cfg.color}>{cfg.text}</Tag>
+      },
+    },
+    {
+      title: 'Hành động',
+      key: 'action',
+      render: (_, record) => (
+        <span className="flex gap-2">
+          <Button type="text" icon={<Edit size={18} />} title="Sửa" className="text-blue-500" onClick={() => showModal(record)} />
+          <Popconfirm
+            title="Xóa danh mục"
+            description="Bạn có chắc chắn muốn xóa danh mục này?"
+            onConfirm={() => deleteMutation.mutate(record._id || record.key || record.id)}
+            okText="Xóa"
+            cancelText="Hủy"
+          >
+            <Button type="text" icon={<Trash2 size={18} />} title="Xóa" className="text-red-500" loading={deleteMutation.isPending && deleteMutation.variables === (record._id || record.key || record.id)} />
+          </Popconfirm>
+        </span>
+      ),
+    },
+  ]
 
   return (
     <>
-      <div className='flex items-center justify-between'>
-        <section className="mb-3">
-          <h1 className="font-bold text-3xl mb-2">Quản lý danh mục</h1>
-          <Breadcrumb items={[{ title: 'Trang chủ' }, { title: 'Quản lý danh mục' }]} />
-        </section>
+      <section className="mb-3">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="font-bold text-3xl mb-2">Quản lý danh mục</h1>
+            <Breadcrumb items={[{ title: 'Trang chủ' }, { title: 'Quản lý danh mục' }]} />
+          </div>
+          <Button type="primary" className="rounded-xl flex items-center gap-2" icon={<Plus size={18} />} onClick={() => showModal()}>
+            Thêm danh mục
+          </Button>
+        </div>
+      </section>
 
-        <Button type='primary' onClick={() => {
-          setModalMode('create');
-          setModalInitialValues({});
-          setModalVisible(true);
-        }}>
-          Thêm mới
-        </Button>
-      </div>
-      <Card className="shadow-sm rounded-2xl xl:col-span-2" title="Danh mục sản phẩm">
-        <Table
-          columns={getColumns(handleEdit, handleDelete)}
-          dataSource={categories}
-          loading={isLoading}
-          pagination={{ pageSize: 5 }}
-          className="rounded-xl"
-          rowKey="id"
-        />
+      <Card className="shadow-sm rounded-2xl xl:col-span-2" title="Danh sách danh mục">
+        <Table columns={columns} dataSource={categories} loading={isLoading} rowKey={(r) => r._id || r.key || r.id} pagination={{ pageSize: 8 }} className="rounded-xl" />
       </Card>
-      <ReusableFormModal
-        visible={modalVisible}
-        mode={modalMode}
-        onOk={handleModalOk}
-        onCancel={() => setModalVisible(false)}
-        formSchema={categoryFormSchema}
-        initialValues={modalInitialValues}
-        apiHandler={(values) => updateCategory(modalInitialValues.id, values)}
-        title={'Cập nhật danh mục'}
+
+      <CategoryForm
+        isModalOpen={isModalOpen}
+        handleCancel={handleCancel}
+        onFinish={onFinish}
+        editingCategory={editingCategory}
+        form={form}
+        confirmLoading={createMutation.isPending || updateMutation.isPending}
       />
     </>
-  );
-};
+  )
+}
 
-export default CategoryManagement;
+export default CategoryManagement
+
