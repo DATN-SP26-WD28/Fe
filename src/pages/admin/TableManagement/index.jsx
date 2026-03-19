@@ -3,6 +3,7 @@ import { Card, Table, Tag, Breadcrumb, Button, QRCode, message, Popconfirm, Form
 import { Edit, Trash2, Plus, Download, ExternalLink } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchTables, deleteTable, createTable, updateTable } from '@/configs/table.api'
+import { downloadCanvasImage, composeQRCodeWithText } from '@/shared/utils/utils'
 import TableForm from './TableForm'
 
 const TableManagement = () => {
@@ -78,17 +79,22 @@ const TableManagement = () => {
     }
   }
 
-  const downloadQRCode = (tableNumber) => {
-    const canvas = document.getElementById(`qr-code-${tableNumber}`)?.querySelector('canvas')
-    if (canvas) {
-      const url = canvas.toDataURL('image/png')
-      const a = document.createElement('a')
-      a.download = `QRCode-Ban-${tableNumber}.png`
-      a.href = url
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-    }
+  const downloadQRCode = (record) => {
+    const canvasEl = document.getElementById(`qr-code-${record.table_number}`)?.querySelector('canvas')
+    if (!canvasEl) return
+
+    // build title and subtitle
+    const rawName = record.name || `Bàn số ${record.table_number}`
+    const title = rawName
+    const subtitle = 'Quét mã QR để gọi món'
+
+    // compose a new canvas containing QR + texts
+    const composed = composeQRCodeWithText(canvasEl, title, subtitle, { padding: 20, titleFont: '20px sans-serif', subtitleFont: '13px sans-serif' })
+    if (!composed) return
+
+    const safeName = String(rawName).replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-_.]/g, '')
+    const filename = `QRCode-${safeName}.png`
+    downloadCanvasImage(composed, filename)
   }
 
   const columns = [
@@ -112,7 +118,7 @@ const TableManagement = () => {
               size="small"
               className="flex items-center gap-2 rounded-md px-2 py-1 text-green-600 border border-green-100 bg-white"
               icon={<Download size={14} />}
-              onClick={() => downloadQRCode(record.table_number)}
+              onClick={() => downloadQRCode(record)}
               title="Tải mã QR"
             >
               Tải về
