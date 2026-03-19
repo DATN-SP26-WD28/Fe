@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const axiosInstance = axios.create({
-  baseURL: 'http://localhost:8888/',
+  baseURL: import.meta.env.VITE_API_BACKEND_URL || 'http://localhost:8888',
   timeout: 1000,
   headers: { 'X-Custom-Header': 'foobar' },
 })
