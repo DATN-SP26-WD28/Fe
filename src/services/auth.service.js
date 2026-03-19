@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = 'http://localhost:8888';
+import axiosClient from './axiosClient';
 
 export const registerUser = async (userData) => {
     const formattedData = {
@@ -8,9 +6,22 @@ export const registerUser = async (userData) => {
         email: userData.email,
         phone: userData.phone,
         password: userData.password,
-        role: 'customer' 
+        role: 'customer'
     };
 
-    const response = await axios.post(`${API_URL}/auth/register`, formattedData);
+    const response = await axiosClient.post('/auth/register', formattedData);
+    return response.data;
+};
+
+export const loginUser = async (credentials) => {
+    const response = await axiosClient.post('/auth/login', {
+        email: credentials.email,
+        password: credentials.password
+    });
+    return response.data;
+};
+
+export const getMe = async () => {
+    const response = await axiosClient.get('/users/me');
     return response.data;
 };
