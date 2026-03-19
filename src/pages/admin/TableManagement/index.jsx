@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Card, Table, Tag, Breadcrumb, Button, QRCode, message, Popconfirm, Form } from 'antd'
-import { Edit, Trash2, Plus } from 'lucide-react'
+import { Edit, Trash2, Plus, Download, ExternalLink } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchTables, deleteTable, createTable, updateTable } from '@/configs/table.api'
 import TableForm from './TableForm'
@@ -78,26 +78,66 @@ const TableManagement = () => {
     }
   }
 
+  const downloadQRCode = (tableNumber) => {
+    const canvas = document.getElementById(`qr-code-${tableNumber}`)?.querySelector('canvas')
+    if (canvas) {
+      const url = canvas.toDataURL('image/png')
+      const a = document.createElement('a')
+      a.download = `QRCode-Ban-${tableNumber}.png`
+      a.href = url
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    }
+  }
+
   const columns = [
     {
       title: 'QR Code',
       dataIndex: 'qr_code',
       key: 'qr_code',
-      width: 150,
-      render: (qrCode) => (
-        <QRCode
-          errorLevel="H"
-          size={100}
-          value={qrCode || 'No code'}
-          icon="/logo-roosta.png"
-        />
+      width: 200,
+      render: (qrCode, record) => (
+        <div className="flex flex-col items-center gap-2">
+          <div id={`qr-code-${record.table_number}`}>
+            <QRCode
+              value={qrCode || 'No code'}
+              size={150}
+              icon="/logo-roosta.png"
+              errorLevel="H"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              size="small"
+              className="flex items-center gap-2 rounded-md px-2 py-1 text-green-600 border border-green-100 bg-white"
+              icon={<Download size={14} />}
+              onClick={() => downloadQRCode(record.table_number)}
+              title="Tải mã QR"
+            >
+              Tải về
+            </Button>
+            <Button
+              size="small"
+              className="flex items-center gap-2 rounded-md px-2 py-1 text-blue-600 border border-blue-100 bg-white"
+              icon={<ExternalLink size={14} />}
+              onClick={() => {
+                if (qrCode) window.open(qrCode, '_blank')
+              }}
+              title="Mở liên kết"
+            >
+              Link
+            </Button>
+          </div>
+          {qrCode && <small className="text-gray-400 text-[10px] break-all max-w-[120px] text-center">{qrCode.replace('https://', '')}</small>}
+        </div>
       ),
     },
     {
       title: 'Số bàn',
       dataIndex: 'table_number',
       key: 'table_number',
-      render: (v) => <span className="font-bold text-lg">Bàn {v}</span>,
+      render: (v) => <span className="font-bold text-lg text-blue-600">Bàn số {v}</span>,
     },
     {
       title: 'Sức chứa',
