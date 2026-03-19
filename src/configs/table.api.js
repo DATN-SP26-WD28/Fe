@@ -4,8 +4,8 @@ import axiosInstance from './axiosClient';
  * Lấy danh sách tất cả các bàn
  */
 export const fetchTables = async () => {
-  const response = await axiosInstance.get('/tables');
-  return response.data.data; // Trả về mảng tables từ createResponse của backend
+  const { data } = await axiosInstance.get('/tables');
+  return data; // Trả về mảng tables từ createResponse của backend
 };
 
 /**
@@ -13,8 +13,8 @@ export const fetchTables = async () => {
  * @param {Object} tableData { table_number, capacity }
  */
 export const createTable = async (tableData) => {
-  const response = await axiosInstance.post('/tables', tableData);
-  return response.data;
+  const { data } = await axiosInstance.post('/tables', tableData);
+  return data;
 };
 
 /**
@@ -23,8 +23,8 @@ export const createTable = async (tableData) => {
  * @param {Object} tableData { table_number, capacity, status, location }
  */
 export const updateTable = async (id, tableData) => {
-  const response = await axiosInstance.put(`/tables/${id}`, tableData);
-  return response.data;
+  const { data } = await axiosInstance.put(`/tables/${id}`, tableData);
+  return data;
 };
 
 /**
@@ -32,6 +32,6 @@ export const updateTable = async (id, tableData) => {
  * @param {string} id Table ID
  */
 export const deleteTable = async (id) => {
-  const response = await axiosInstance.delete(`/tables/${id}`);
-  return response.data;
+  const { data } = await axiosInstance.delete(`/tables/${id}`);
+  return data;
 };

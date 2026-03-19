@@ -4,8 +4,8 @@ import axiosInstance from './axiosClient';
  * Lấy danh sách tất cả người dùng
  */
 export const fetchUsers = async () => {
-  const response = await axiosInstance.get('/users');
-  return response.data.data; // Trả về mảng users từ createResponse của backend
+  const { data } = await axiosInstance.get('/users');
+  return data; // Trả về mảng users từ createResponse của backend
 };
 
 /**
@@ -13,8 +13,8 @@ export const fetchUsers = async () => {
  * @param {Object} userData { name, email, phone, role }
  */
 export const createUser = async (userData) => {
-  const response = await axiosInstance.post('/users', userData);
-  return response.data;
+  const { data } = await axiosInstance.post('/users', userData);
+  return data;
 };
 
 /**
@@ -23,8 +23,8 @@ export const createUser = async (userData) => {
  * @param {Object} userData { name, email, phone, role }
  */
 export const updateUser = async (id, userData) => {
-  const response = await axiosInstance.put(`/users/${id}`, userData);
-  return response.data;
+  const { data } = await axiosInstance.put(`/users/${id}`, userData);
+  return data;
 };
 
 /**
@@ -32,6 +32,6 @@ export const updateUser = async (id, userData) => {
  * @param {string} id User ID
  */
 export const deleteUser = async (id) => {
-  const response = await axiosInstance.delete(`/users/${id}`);
-  return response.data;
+  const { data } = await axiosInstance.delete(`/users/${id}`);
+  return data;
 };
