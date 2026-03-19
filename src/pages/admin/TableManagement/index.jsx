@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Card, Table, Tag, Breadcrumb, Button, QRCode, message, Popconfirm, Form } from 'antd'
-import { Edit, Trash2, Plus, Download, ExternalLink } from 'lucide-react'
+import { Edit, Trash2, Plus, Download } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchTables, deleteTable, createTable, updateTable } from '@/configs/table.api'
 import { downloadCanvasImage, composeQRCodeWithText } from '@/shared/utils/utils'
@@ -116,23 +116,12 @@ const TableManagement = () => {
           <div className="flex gap-2">
             <Button
               size="small"
-              className="flex items-center gap-2 rounded-md px-2 py-1 text-green-600 border border-green-100 bg-white"
+              className="flex items-center gap-2 rounded-md px-2 py-1 border border-green-100 bg-white"
               icon={<Download size={14} />}
               onClick={() => downloadQRCode(record)}
               title="Tải mã QR"
             >
-              Tải về
-            </Button>
-            <Button
-              size="small"
-              className="flex items-center gap-2 rounded-md px-2 py-1 text-blue-600 border border-blue-100 bg-white"
-              icon={<ExternalLink size={14} />}
-              onClick={() => {
-                if (qrCode) window.open(qrCode, '_blank')
-              }}
-              title="Mở liên kết"
-            >
-              Link
+              Tải xuống
             </Button>
           </div>
           {qrCode && <small className="text-sm text-gray-500">{qrCode}</small>}
