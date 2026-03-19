@@ -22,6 +22,6 @@ export const loginUser = async (credentials) => {
 };
 
 export const getMe = async () => {
-    const response = await axiosClient.get('/users/me');
-    return response.data;
+  const response = await axiosClient.get('/users/me');
+  return response.data.data; // Trả về thẳng object user
 };
