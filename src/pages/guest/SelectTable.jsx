@@ -17,12 +17,8 @@ const SelectTable = () => {
             message.warning(`Bàn số ${table.table_number} hiện đang có khách!`);
             return;
         }
-
-        sessionStorage.setItem('selectedTable', JSON.stringify(table));
-
-        message.success(`Đã chọn Bàn ${table.table_number}. Mời bạn chọn món!`);
-
-        navigate(`/menu?tableId=${table._id}&tableNum=${table.table_number}`);
+        // Chuyển sang trang nhập tên khách hàng kèm theo ID bàn
+        navigate(`/table/${table._id}`);
     };
 
     if (isLoading) return <div className="min-h-screen flex items-center justify-center"><Spin size="large" /></div>;

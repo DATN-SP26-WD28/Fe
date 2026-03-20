@@ -41,14 +41,13 @@ const AppRoutes = () => {
           <Route path="select-table" element={<SelectTable />} />
           <Route path="contact" element={<Contact />} />
           <Route path="profile" element={< Profile />} />
-          <Route path="menu" element={< MenuInterface />} />
           <Route path="cart" element={<div className="p-10 text-center">Cart Coming Soon</div>} />
           <Route path="orders" element={<div className="p-10 text-center">Orders Coming Soon</div>} />
         </Route>
         {/* Guest: Khách hàng quét QR */}
         <Route path="/table/:tableId" element={<CustomerPage />} />
         <Route path="/table-order/:tableId" element={<GuestLayout />}>
-          <Route path="menu" element={<MenuPage />} />
+          <Route path="menu" element={<MenuInterface />} />
           <Route path="orders" element={<OrdersPage />} />
           <Route path="orders/:orderId" element={<OrderDetailPage />} />
           <Route path="payment" element={<PaymentPage />} />
