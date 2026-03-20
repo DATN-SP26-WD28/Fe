@@ -1,102 +1,173 @@
-import React, { useState } from 'react'
-
-const MOCK_ORDERS = [
-  {
-    id: 'ORD-1001',
-    time: '11:23 11/03/2026',
-    status: 'Đang chế biến',
-    items: [
-      { name: 'Thịt Bò Mỹ Thượng Hạng', qty: 2, price: 159000 },
-      { name: 'Đậu Hũ Non Chiên Giòn', qty: 1, price: 49000 },
-    ],
-  },
-  {
-    id: 'ORD-1002',
-    time: '10:05 11/03/2026',
-    status: 'Hoàn thành',
-    items: [
-      { name: 'Hải Sản Tươi Sống Mix', qty: 1, price: 249000 },
-    ],
-  },
-]
+import React, { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { Spin, message } from 'antd'
+import { ArrowLeftOutlined } from '@ant-design/icons'
+import orderAPI from '@/configs/order.api'
 
 const formatCurrency = (v) => new Intl.NumberFormat('vi-VN').format(v) + 'đ'
 
 const OrdersPage = () => {
+  const { tableId } = useParams()
+  const navigate = useNavigate()
+  const [orders, setOrders] = useState([])
+  const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState({})
+
+  // 1. Hàm lấy dữ liệu từ Server
+  const fetchOrders = async () => {
+    try {
+      const response = await orderAPI.getByTable(tableId)
+      // Lưu ý: Dữ liệu trả về cần được sắp xếp theo thời gian mới nhất
+      setOrders(response.data.reverse()) 
+    } catch (error) {
+      console.error("Lỗi fetch đơn hàng:", error)
+      message.error("Không thể tải danh sách đơn hàng")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 2. Tự động cập nhật mỗi 10 giây (để khách thấy trạng thái bếp thay đổi)
+  useEffect(() => {
+    fetchOrders()
+    const interval = setInterval(fetchOrders, 10000)
+    return () => clearInterval(interval)
+  }, [tableId])
 
   const toggle = (id) => setOpen((s) => ({ ...s, [id]: !s[id] }))
 
-  const calcTotal = (items) => items.reduce((s, it) => s + it.qty * it.price, 0)
+  // 3. Hàm hiển thị màu sắc theo trạng thái đơn hàng
+  const getStatusStyle = (status) => {
+    switch (status) {
+      case 'pending': return 'bg-orange-100 text-orange-600' // Bếp đã nhận
+      case 'confirmed': return 'bg-blue-100 text-blue-600'  // Đang nấu
+      case 'completed': return 'bg-green-100 text-green-700' // Đã ra món
+      case 'cancelled': return 'bg-red-100 text-red-600'    // Đã hủy
+      default: return 'bg-gray-100 text-gray-600'
+    }
+  }
+
+  const getStatusText = (status) => {
+    const map = {
+      pending: 'Bếp đã nhận',
+      confirmed: 'Đang chế biến',
+      completed: 'Hoàn thành',
+      cancelled: 'Đã hủy'
+    }
+    return map[status] || status
+  }
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><Spin size="large" tip="Đang tải đơn hàng..." /></div>
 
   return (
-    <div className="p-4 max-w-[980px] mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Theo dõi đơn hàng</h1>
+    <div className="p-4 max-w-[980px] mx-auto pb-24">
+      {/* Header điều hướng */}
+      <div className="flex items-center gap-3 mb-6">
+        <button 
+          onClick={() => navigate(-1)}
+          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+        >
+          <ArrowLeftOutlined className="text-xl" />
+        </button>
+        <h1 className="text-2xl font-black uppercase tracking-tight text-gray-800">Món đã gọi</h1>
+      </div>
 
       <div className="space-y-4">
-        {MOCK_ORDERS.map((order) => {
-          const total = calcTotal(order.items)
-          const isDone = order.status === 'Hoàn thành'
+        {orders.map((order) => {
+          const total = order.total_amount
+          const statusStyle = getStatusStyle(order.status)
+          const timeFormatted = new Date(order.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+
           return (
             <div
-              key={order.id}
-              className="border border-gray-200 rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition-shadow cursor-default"
+              key={order._id}
+              className="border border-gray-100 rounded-2xl p-4 bg-white shadow-sm transition-all overflow-hidden"
             >
               <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Mã đơn: <span className="font-medium text-gray-800">{order.id}</span></p>
-                  <p className="text-xs text-gray-400">{order.time}</p>
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className="text-sm font-semibold text-gray-800">{order.items.length} món</span>
-                    <span className="text-sm text-gray-400">•</span>
-                    <span className="text-sm font-semibold text-brand">{formatCurrency(total)}</span>
+                <div onClick={() => toggle(order._id)} className="flex-1 cursor-pointer">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                      ID: {order._id.slice(-6).toUpperCase()}
+                    </p>
+                    <span className="text-gray-300">•</span>
+                    <p className="text-xs text-gray-500 font-medium">{timeFormatted}</p>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <span className="text-base font-black text-gray-800">{order.items.length} món</span>
+                    <span className="text-gray-300">•</span>
+                    <span className="text-base font-black text-orange-500 italic">{formatCurrency(total)}</span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${isDone ? 'bg-green-100 text-green-700' : 'bg-brand-light text-brand'}`}>
-                    {order.status}
+                  <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider ${statusStyle}`}>
+                    {getStatusText(order.status)}
                   </span>
 
                   <button
-                    onClick={() => toggle(order.id)}
-                    className="flex items-center gap-2 text-sm text-brand font-medium hover:text-brand-dark"
-                    aria-expanded={!!open[order.id]}
+                    onClick={() => toggle(order._id)}
+                    className={`p-2 rounded-lg bg-gray-50 text-gray-400 transition-transform ${open[order._id] ? 'rotate-90' : ''}`}
                   >
-                    <svg className={`h-4 w-4 transition-transform ${open[order.id] ? 'rotate-90' : ''}`} viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                      <path fillRule="evenodd" d="M6.293 14.707a1 1 0 010-1.414L10.586 9 6.293 4.707a1 1 0 011.414-1.414l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 5.707a1 1 0 011.414-1.414l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0z" clipRule="evenodd" />
                     </svg>
                   </button>
                 </div>
               </div>
 
-              {open[order.id] && (
-                <div className="mt-4 border-t border-gray-200 pt-4 space-y-3">
+              {/* Chi tiết từng món trong đơn */}
+              {open[order._id] && (
+                <div className="mt-4 border-t border-dashed border-gray-100 pt-4 space-y-4 animate-fadeIn">
                   {order.items.map((it, idx) => (
                     <div key={idx} className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-gray-800">{it.name}</div>
-                        <div className="text-xs text-gray-500">Số lượng: {it.qty}</div>
+                      <div className="flex gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center font-bold text-orange-600 text-xs">
+                          x{it.quantity}
+                        </div>
+                        <div>
+                          {/* Lưu ý: Nếu backend populate, hãy dùng it.dish_id.name */}
+                          <div className="font-bold text-gray-800 text-sm">{it.dish_id?.name || "Món ăn"}</div>
+                          <div className="text-[10px] text-gray-400 font-medium uppercase tracking-tighter">
+                            Đơn giá: {formatCurrency(it.price)}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-sm font-medium text-gray-800">{formatCurrency(it.price * it.qty)}</div>
+                      <div className="text-sm font-black text-gray-700">{formatCurrency(it.price * it.quantity)}</div>
                     </div>
                   ))}
-
-                  <div className="pt-2 border-t border-gray-200 flex items-center justify-between">
-                    <div className="text-sm text-gray-500">Tổng cộng</div>
-                    <div className="text-sm font-semibold text-brand">{formatCurrency(total)}</div>
-                  </div>
                 </div>
               )}
             </div>
           )
         })}
 
-        {MOCK_ORDERS.length === 0 && (
-          <div className="mt-8 text-center text-gray-400 text-sm">
-            Hiện chưa có đơn hàng để theo dõi.
+        {orders.length === 0 && (
+          <div className="mt-20 text-center">
+            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-10 h-10 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+            </div>
+            <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">Bạn chưa gọi món nào</p>
+            <button 
+              onClick={() => navigate(`/table-order/${tableId}/menu`)}
+              className="mt-4 text-orange-500 font-black text-sm uppercase underline"
+            >
+              Quay lại thực đơn
+            </button>
           </div>
         )}
+      </div>
+
+      {/* Nút gọi thêm món cố định ở dưới */}
+      <div className="fixed bottom-20 left-4 right-4 z-40">
+         <button 
+            onClick={() => navigate(`/table-order/${tableId}/menu`)}
+            className="w-full h-14 bg-orange-500 text-white rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-orange-200 active:scale-95 transition-all"
+         >
+            Gọi thêm món
+         </button>
       </div>
     </div>
   )
