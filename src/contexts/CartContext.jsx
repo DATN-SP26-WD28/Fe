@@ -1,17 +1,18 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
-    const [cart, setCart] = useState([]);
-
-    // 1. Tự động tải giỏ hàng từ sessionStorage khi khởi động
-    useEffect(() => {
+    // 1. Khởi tạo giỏ hàng từ sessionStorage (Lazy Initializer)
+    const [cart, setCart] = useState(() => {
         const savedCart = sessionStorage.getItem('roosta_cart');
-        if (savedCart) {
-            setCart(JSON.parse(savedCart));
+        try {
+            return savedCart ? JSON.parse(savedCart) : [];
+        } catch (error) {
+            console.error("Lỗi parse giỏ hàng:", error);
+            return [];
         }
-    }, []);
+    });
 
     // 2. Tự động lưu giỏ hàng mỗi khi có thay đổi
     useEffect(() => {
@@ -19,40 +20,42 @@ export const CartProvider = ({ children }) => {
     }, [cart]);
 
     // Hàm thêm món vào giỏ
-    const addToCart = (product) => {
+    const addToCart = useCallback((product) => {
         setCart((prevCart) => {
             const existingItem = prevCart.find((item) => item._id === product._id);
             if (existingItem) {
-                // Nếu món đã có, tăng số lượng
                 return prevCart.map((item) =>
                     item._id === product._id ? { ...item, quantity: item.quantity + 1 } : item
                 );
             }
-            // Nếu món mới, thêm vào với số lượng là 1
             return [...prevCart, { ...product, quantity: 1 }];
         });
-    };
+    }, []);
 
     // Hàm xóa/giảm số lượng
-    const removeFromCart = (productId) => {
+    const removeFromCart = useCallback((productId) => {
         setCart((prevCart) =>
             prevCart.reduce((acc, item) => {
                 if (item._id === productId) {
-                    if (item.quantity > 1) acc.push({ ...item, quantity: item.quantity - 1 });
+                    if (item.quantity > 1) {
+                        acc.push({ ...item, quantity: item.quantity - 1 });
+                    }
                 } else {
                     acc.push(item);
                 }
                 return acc;
             }, [])
         );
-    };
+    }, []);
 
-    // Hàm xóa trắng giỏ hàng (sau khi đặt đơn thành công)
-    const clearCart = () => setCart([]);
+    const clearCart = useCallback(() => setCart([]), []);
 
-    // Tính toán tổng cộng
+    // 3. Tính toán tổng cộng (Ép kiểu Number để tránh lỗi NaN)
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-    const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const totalPrice = cart.reduce((sum, item) => {
+        const price = Number(item.price) || 0;
+        return sum + price * item.quantity;
+    }, 0);
 
     return (
         <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, totalItems, totalPrice }}>
@@ -61,4 +64,11 @@ export const CartProvider = ({ children }) => {
     );
 };
 
-export const useCart = () => useContext(CartContext);
+// eslint-disable-next-line react-refresh/only-export-components
+export const useCart = () => {
+    const context = useContext(CartContext);
+    if (!context) {
+        throw new Error('useCart phải được sử dụng trong CartProvider');
+    }
+    return context;
+};

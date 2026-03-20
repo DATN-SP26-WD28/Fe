@@ -1,28 +1,38 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Form, Input, Button, message } from 'antd'
 import { UserOutlined } from '@ant-design/icons'
-// 1. Thêm useParams để lấy ID bàn từ URL
 import { useNavigate, useParams } from 'react-router-dom'
 
 const CustomerPage = () => {
   const navigate = useNavigate()
-  // 2. Lấy tableId từ route /table/:tableId
   const { tableId } = useParams()
+  // Sử dụng hook useForm để điều khiển dữ liệu form từ code
+  const [form] = Form.useForm()
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem('user');
+
+    if (savedUser) {
+      try {
+        const user = JSON.parse(savedUser);
+        // Sửa từ user.name thành user.username cho đúng với ảnh tab Application của bạn
+        if (user && user.username) {
+          form.setFieldsValue({ name: user.username });
+        }
+      } catch (error) {
+        console.error("Lỗi parse dữ liệu người dùng", error);
+      }
+    }
+  }, [form]);
 
   const onFinish = (values) => {
-    // 3. Lưu thông tin khách vào sessionStorage (dùng trong phiên đặt món này thôi)
     sessionStorage.setItem('guestName', values.name)
-
     message.success(`Chào mừng ${values.name} đến với Roosta!`)
-
-    // 4. Điều hướng sang trang Menu theo đúng cấu trúc Route GuestLayout bạn đã khai báo
-    // Cấu trúc: /table-order/:tableId/menu
     navigate(`/table-order/${tableId}/menu`)
   }
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-orange-500">
-      {/* Background & Overlay */}
       <div className="absolute inset-0 bg-black/20 z-0" />
 
       <div className="min-h-screen px-4 py-8 flex items-center justify-center relative z-10">
@@ -39,6 +49,7 @@ const CustomerPage = () => {
           </div>
 
           <Form
+            form={form} // Kết nối form instance vào đây
             name="customer_form"
             layout="vertical"
             onFinish={onFinish}
@@ -60,7 +71,7 @@ const CustomerPage = () => {
               htmlType="submit"
               className="w-full h-14 bg-orange-500 hover:bg-orange-600 rounded-2xl border-none font-bold shadow-lg shadow-orange-200 mt-2 uppercase tracking-widest"
             >
-              Bắt đầu đặt món
+              Tiếp tục đặt món
             </Button>
           </Form>
 
