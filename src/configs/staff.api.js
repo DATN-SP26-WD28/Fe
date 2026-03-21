@@ -1,37 +1,71 @@
 import axiosInstance from './axiosClient';
 
 /**
- * Lấy danh sách tất cả nhân viên
+ * Lấy danh sách tất cả nhân viên (staff)
  */
 export const fetchStaff = async () => {
-  const { data } = await axiosInstance.get('/staff');
-  return data; // Trả về mảng staff từ createResponse của backend
+  const response = await axiosInstance.get('/staff');
+  // Transform backend response: { message, data, meta }
+  // Map username -> name, _id -> id
+  const staff = response.data.map(user => ({
+    id: user._id,
+    key: user._id, // Ant Design table needs key
+    name: user.username,
+    email: user.email,
+    phone: user.phone,
+    role: user.role,
+  }));
+  return staff;
+};
+
+/**
+ * Lấy nhân viên theo ID
+ */
+export const getStaffById = async (id) => {
+  const response = await axiosInstance.get(`/staff/${id}`);
+  return response.data;
 };
 
 /**
  * Tạo nhân viên mới
- * @param {Object} staffData { name, email, phone, role }
  */
 export const createStaff = async (staffData) => {
-  const { data } = await axiosInstance.post('/staff', staffData);
-  return data;
+  const payload = {
+    username: staffData.name,
+    email: staffData.email,
+    phone: staffData.phone,
+    role: staffData.role,
+  };
+  const response = await axiosInstance.post('/staff', payload);
+  return response.data;
 };
 
 /**
- * Cập nhật thông tin nhân viên
- * @param {string} id Staff ID
- * @param {Object} staffData { name, email, phone, role }
+ * Cập nhật nhân viên
  */
 export const updateStaff = async (id, staffData) => {
-  const { data } = await axiosInstance.put(`/staff/${id}`, staffData);
-  return data;
+  const payload = {
+    username: staffData.name,
+    email: staffData.email,
+    phone: staffData.phone,
+    role: staffData.role,
+  };
+  const response = await axiosInstance.put(`/staff/${id}`, payload);
+  return response.data;
 };
 
 /**
  * Xóa nhân viên
- * @param {string} id Staff ID
  */
 export const deleteStaff = async (id) => {
-  const { data } = await axiosInstance.delete(`/staff/${id}`);
-  return data;
+  const response = await axiosInstance.delete(`/staff/${id}`);
+  return response.data;
+};
+
+/**
+ * Khóa/Mở khóa nhân viên
+ */
+export const toggleStaffStatus = async (id) => {
+  const response = await axiosInstance.patch(`/staff/${id}/toggle-status`);
+  return response.data;
 };

@@ -31,7 +31,8 @@ const StaffManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['staff'] })
     },
     onError: (err) => {
-      message.error(err.response?.data?.message || 'Tạo nhân viên thất bại')
+      const errorMsg = err?.response?.data?.message || err?.message || 'Tạo nhân viên thất bại'
+      message.error(errorMsg)
     },
   })
 
@@ -43,7 +44,8 @@ const StaffManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['staff'] })
     },
     onError: (err) => {
-      message.error(err.response?.data?.message || 'Cập nhật thất bại')
+      const errorMsg = err?.response?.data?.message || err?.message || 'Cập nhật thất bại'
+      message.error(errorMsg)
     },
   })
 
@@ -54,7 +56,8 @@ const StaffManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['staff'] })
     },
     onError: (err) => {
-      message.error(err.response?.data?.message || 'Xóa nhân viên thất bại')
+      const errorMsg = err?.response?.data?.message || err?.message || 'Xóa nhân viên thất bại'
+      message.error(errorMsg)
     },
   })
 
@@ -81,7 +84,8 @@ const StaffManagement = () => {
 
   const onFinish = async (values) => {
     if (editingStaff) {
-      updateMutation.mutate({ id: editingStaff.id || editingStaff.key, data: values })
+      // Use 'id' field for updates (MongoDB _id)
+      updateMutation.mutate({ id: editingStaff.id, data: values })
     } else {
       createMutation.mutate(values)
     }

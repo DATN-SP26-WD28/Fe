@@ -43,6 +43,7 @@ const UserForm = ({
             { required: true, message: 'Vui lòng nhập email' },
             { type: 'email', message: 'Email không hợp lệ' },
           ]}
+          normalize={(value) => value?.trim() || ''}
         >
           <Input placeholder="Nhập email" />
         </Form.Item>
@@ -51,6 +52,7 @@ const UserForm = ({
           label="Số điện thoại"
           name="phone"
           rules={[{ required: true, message: 'Vui lòng nhập số điện thoại' }]}
+          normalize={(value) => value?.trim() || ''}
         >
           <Input placeholder="Nhập số điện thoại" />
         </Form.Item>
@@ -61,16 +63,10 @@ const UserForm = ({
           rules={[{ required: true, message: 'Vui lòng chọn vai trò' }]}
         >
           <Select
-            options={Object.entries({
-              admin: { label: 'Quản trị viên' },
-              cashier: { label: 'Thu ngân' },
-              waiter: { label: 'Phục vụ' },
-              chef: { label: 'Nhân viên bếp' },
-              customer: { label: 'Khách hàng' },
-            }).map(([value, { label }]) => ({
-              value,
-              label,
-            }))}
+            options={[
+              { value: 'customer', label: 'Khách hàng' }
+            ]}
+            disabled
           />
         </Form.Item>
       </Form>

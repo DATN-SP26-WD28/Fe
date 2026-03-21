@@ -32,7 +32,8 @@ const UserManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
     },
     onError: (err) => {
-      message.error(err.response?.data?.message || 'Tạo người dùng thất bại')
+      const errorMsg = err?.response?.data?.message || err?.message || 'Tạo người dùng thất bại'
+      message.error(errorMsg)
     },
   })
 
@@ -44,7 +45,8 @@ const UserManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
     },
     onError: (err) => {
-      message.error(err.response?.data?.message || 'Cập nhật thất bại')
+      const errorMsg = err?.response?.data?.message || err?.message || 'Cập nhật thất bại'
+      message.error(errorMsg)
     },
   })
 
@@ -55,7 +57,8 @@ const UserManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
     },
     onError: (err) => {
-      message.error(err.response?.data?.message || 'Xóa thất bại')
+      const errorMsg = err?.response?.data?.message || err?.message || 'Xóa thất bại'
+      message.error(errorMsg)
     },
   })
 
@@ -76,8 +79,8 @@ const UserManagement = () => {
     setVisibleModal(true)
   }
 
-  const onDelete = (id) => {
-    deleteMutation.mutate(id)
+  const onDelete = (record) => {
+    deleteMutation.mutate(record.id)
   }
 
   const columns = [
@@ -129,7 +132,7 @@ const UserManagement = () => {
             title="Xác nhận xóa người dùng này?"
             okText="Xóa"
             cancelText="Hủy"
-            onConfirm={() => onDelete(record.key ?? record.id)}
+            onConfirm={() => onDelete(record)}
           >
             <Button type="text" icon={<Trash2 size={18} />} title="Xóa" className="text-red-500" />
           </Popconfirm>
@@ -140,8 +143,7 @@ const UserManagement = () => {
 
   const onFinish = (values) => {
     if (editingUser) {
-      const id = editingUser.key ?? editingUser.id
-      updateMutation.mutate({ id, data: values })
+      updateMutation.mutate({ id: editingUser.id, data: values })
     } else {
       createMutation.mutate(values)
     }
