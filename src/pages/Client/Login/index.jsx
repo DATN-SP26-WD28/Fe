@@ -52,24 +52,15 @@ const Login = () => {
             <ArrowLeftOutlined className="text-base" />
           </button>
 
-          <div className="mb-7 text-center">
-            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-3xl bg-[#fff3e6] ring-1 ring-[#ffe2c4]">
-              <img src="/logo-roosta.png" alt="Roosta Logo" className="h-14 w-14 object-contain" />
-            </div>
-            <h2 className="text-2xl font-extrabold leading-tight text-[#2b1a0f]">
-              Mừng bạn trở lại
-            </h2>
-            <p className="mt-2 text-sm leading-relaxed text-[#7b5b46]">
-              Đăng nhập để tích điểm và nhận ưu đãi thành viên tại Roosta.
-            </p>
-          </div>
+          <h2 className="text-2xl font-extrabold text-center leading-tight text-[#2b1a0f] mb-3">
+            Quản trị viên
+          </h2>
 
           <Form
             name="login_form"
             layout="vertical"
             onFinish={onFinish}
             onFinishFailed={onFinishFailed}
-            size="large"
             disabled={mutation.isPending}
             requiredMark={false}
           >

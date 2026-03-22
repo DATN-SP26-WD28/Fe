@@ -56,24 +56,15 @@ const Register = () => {
             <ArrowLeftOutlined className="text-base" />
           </button>
 
-          <div className="mb-6 text-center">
-            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-3xl bg-[#fff3e6] ring-1 ring-[#ffe2c4]">
-              <img src="/logo-roosta.png" alt="Roosta Logo" className="h-14 w-14 object-contain" />
-            </div>
-            <h2 className="text-2xl font-extrabold leading-tight text-[#2b1a0f]">
-              Trở thành thành viên
-            </h2>
-            <p className="mt-2 text-sm leading-relaxed text-[#7b5b46]">
-              Nhận ngay 50.000 điểm thưởng sau khi hoàn tất đăng ký.
-            </p>
-          </div>
+          <h2 className="text-2xl font-extrabold leading-tight text-[#2b1a0f] mb-3 text-center">
+            Đăng ký thành viên
+          </h2>
 
           <Form
             name="register_form"
             layout="vertical"
             onFinish={onFinish}
             onFinishFailed={onFinishFailed}
-            size="large"
             disabled={mutation.isPending}
             requiredMark={false}
           >
