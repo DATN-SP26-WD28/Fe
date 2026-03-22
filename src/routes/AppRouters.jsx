@@ -44,7 +44,7 @@ const AppRoutes = () => {
             element={<div className="p-10 text-center">Orders Coming Soon</div>}
           />
         </Route> */}
-        {/* Authentication routes */}
+        {/* Trang đăng nhập và đăng ký */}
         <Route path="/">
           <Route index element={<Navigate to="login" replace />} />
           <Route path="login" element={<Login />} />
@@ -76,10 +76,6 @@ const AppRoutes = () => {
         <Route
           path="/error/404"
           element={<div className="p-10 text-center">404 - Page not found</div>}
-        />
-        <Route
-          path="/error/invalid-qr"
-          element={<div className="p-10 text-center">QR Code không hợp lệ</div>}
         />
       </Routes>
     </BrowserRouter>
