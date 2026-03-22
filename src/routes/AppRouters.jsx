@@ -34,7 +34,7 @@ const AppRoutes = () => {
     <BrowserRouter>
       <Routes>
         {/* Client: Khách hàng tham khảo trang web */}
-        <Route path="/" element={<ClientLayout />}>
+        {/* <Route path="/" element={<ClientLayout />}>
           <Route index element={<Home />} />
           <Route path="select-table" element={<SelectTable />} />
           <Route path="profile" element={<Profile />} />
@@ -43,6 +43,12 @@ const AppRoutes = () => {
             path="orders"
             element={<div className="p-10 text-center">Orders Coming Soon</div>}
           />
+        </Route> */}
+        {/* Authentication routes */}
+        <Route path="/">
+          <Route index element={<Navigate to="login" replace />} />
+          <Route path="login" element={<Login />} />
+          <Route path="register" element={<Register />} />
         </Route>
         {/* Guest: Khách hàng quét QR */}
         <Route path="/table/:tableId" element={<CustomerPage />} />
@@ -64,11 +70,6 @@ const AppRoutes = () => {
           <Route path="reviews" element={<ReviewManagement />} />
           <Route path="staffs" element={<StaffManagement />} />
           <Route path="users" element={<UserManagement />} />
-        </Route>
-        {/* Authentication routes */}
-        <Route path="/auth">
-          <Route path="login" element={<Login />} />
-          <Route path="register" element={<Register />} />
         </Route>
         {/* Global Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
