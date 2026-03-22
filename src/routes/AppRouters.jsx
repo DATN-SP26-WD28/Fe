@@ -17,7 +17,6 @@ import UserManagement from '@/pages/admin/UserManagement'
 import {
   CallStaffPage,
   CustomerPage,
-  MenuPage,
   OrderDetailPage,
   OrdersPage,
   PaymentPage,
@@ -27,7 +26,6 @@ import Home from '@/pages/Client/Home'
 import MenuInterface from '@/pages/Client/MenuInterface'
 import Login from '@/pages/Client/Login'
 import Register from '@/pages/Client/Register'
-import Contact from '@/pages/Client/Contact'
 import Profile from '@/pages/guest/ProfilePage'
 import SelectTable from '@/pages/guest/SelectTable'
 
@@ -39,10 +37,12 @@ const AppRoutes = () => {
         <Route path="/" element={<ClientLayout />}>
           <Route index element={<Home />} />
           <Route path="select-table" element={<SelectTable />} />
-          <Route path="contact" element={<Contact />} />
-          <Route path="profile" element={< Profile />} />
+          <Route path="profile" element={<Profile />} />
           <Route path="cart" element={<div className="p-10 text-center">Cart Coming Soon</div>} />
-          <Route path="orders" element={<div className="p-10 text-center">Orders Coming Soon</div>} />
+          <Route
+            path="orders"
+            element={<div className="p-10 text-center">Orders Coming Soon</div>}
+          />
         </Route>
         {/* Guest: Khách hàng quét QR */}
         <Route path="/table/:tableId" element={<CustomerPage />} />
@@ -72,8 +72,14 @@ const AppRoutes = () => {
         </Route>
         {/* Global Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
-        <Route path="/error/404" element={<div className="p-10 text-center">404 - Page not found</div>} />
-        <Route path="/error/invalid-qr" element={<div className="p-10 text-center">QR Code không hợp lệ</div>} />
+        <Route
+          path="/error/404"
+          element={<div className="p-10 text-center">404 - Page not found</div>}
+        />
+        <Route
+          path="/error/invalid-qr"
+          element={<div className="p-10 text-center">QR Code không hợp lệ</div>}
+        />
       </Routes>
     </BrowserRouter>
   )

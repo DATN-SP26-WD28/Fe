@@ -1,27 +1,21 @@
-import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-
 const Header = () => {
-  const [searchParams] = useSearchParams();
-  const [tableNum, setTableNumber] = useState(localStorage.getItem('roosta_table') || '??');
-
-  useEffect(() => {
-    const tableFromUrl = searchParams.get('table');
-    if (tableFromUrl) {
-      localStorage.setItem('roosta_table', tableFromUrl);
-      setTableNumber(tableFromUrl);
-    }
-  }, [searchParams]);
-
   return (
     <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-4 shrink-0 shadow-sm z-50">
       <div className="flex items-center gap-2.5">
-        <a href="/admin" className="w-9 h-9 shrink-0 rounded-xl grid place-items-center overflow-hidden">
-          <img src="/logo-roosta.png" alt="Roosta Logo" width={36} height={36} className="object-contain" />
+        <a
+          href="/admin"
+          className="w-9 h-9 shrink-0 rounded-xl grid place-items-center overflow-hidden"
+        >
+          <img
+            src="/logo-roosta.png"
+            alt="Roosta Logo"
+            width={36}
+            height={36}
+            className="object-contain"
+          />
         </a>
         <div className="flex flex-col leading-tight">
           <span className="font-bold text-sm text-gray-800 tracking-wider">ROOSTA</span>
-          <span className="text-[10px] text-brand font-medium">Bàn số: {tableNum}</span>
         </div>
       </div>
 
@@ -32,7 +26,7 @@ const Header = () => {
         </span>
       </div>
     </header>
-  );
-};
+  )
+}
 
-export default Header;
+export default Header
