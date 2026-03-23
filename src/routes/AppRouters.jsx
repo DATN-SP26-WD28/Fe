@@ -22,29 +22,14 @@ import {
   PaymentPage,
 } from '@/pages/guest'
 // Client pages
-import Home from '@/pages/Client/Home'
 import MenuInterface from '@/pages/Client/MenuInterface'
 import Login from '@/pages/Client/Login'
 import Register from '@/pages/Client/Register'
-import Profile from '@/pages/guest/ProfilePage'
-import SelectTable from '@/pages/guest/SelectTable'
 
 const AppRoutes = () => {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Client: Khách hàng tham khảo trang web */}
-        {/* <Route path="/" element={<ClientLayout />}>
-          <Route index element={<Home />} />
-          <Route path="select-table" element={<SelectTable />} />
-          <Route path="profile" element={<Profile />} />
-          <Route path="cart" element={<div className="p-10 text-center">Cart Coming Soon</div>} />
-          <Route
-            path="orders"
-            element={<div className="p-10 text-center">Orders Coming Soon</div>}
-          />
-        </Route> */}
-        {/* Trang đăng nhập và đăng ký */}
         <Route path="/">
           <Route index element={<Navigate to="login" replace />} />
           <Route path="login" element={<Login />} />
