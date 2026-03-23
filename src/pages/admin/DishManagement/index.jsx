@@ -75,10 +75,9 @@ const DishManagement = () => {
     key: 'image',
     render: (src) => (
       <img
-        src={src || CATEGORY_PLACEHOLDER_IMG}
+        src={src}
         alt="dish"
         style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 8 }}
-        onError={e => { e.target.onerror = null; e.target.src = CATEGORY_PLACEHOLDER_IMG; }}
       />
     ),
     width: 150,
