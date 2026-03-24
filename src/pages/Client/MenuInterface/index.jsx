@@ -2,55 +2,11 @@ import FoodCard from '@/layouts/ClientLayout/components/FoodCard';
 import CartModal from '@/components/CartModal';
 import CartSummaryBar from '@/components/CartSummaryBar';
 import React, { useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import categoryAPI from '@/configs/category.api';
+import dishAPI from '@/configs/dish.api';
 import { useDispatch, useSelector } from 'react-redux';
 import { addItem } from '@/redux/slices/cart.slices';
-
-const CATEGORIES = ['Món đặc sắc', 'Nước lẩu', 'Thịt bò & Cừu', 'Hải sản', 'Rau củ', 'Đồ uống'];
-
-const MOCK_DISHES = [
-  {
-    id: 1,
-    image: 'https://image.cooky.vn/posproduct/g0/27150/s400x400/0c95078d-10cb-44c4-bd99-a4a10853f071.jpeg',
-    name: 'Thịt Bò Mỹ Thượng Hạng',
-    description: 'Mềm, ngọt, thái lát mỏng phù hợp nhúng lẩu',
-    price: '159.000đ',
-  },
-  {
-    id: 2,
-    image: 'https://image.cooky.vn/posproduct/g0/27150/s400x400/0c95078d-10cb-44c4-bd99-a4a10853f071.jpeg',
-    name: 'Nấm Kim Châm Hàn Quốc',
-    description: 'Giòn dai, thơm ngon, bổ dưỡng',
-    price: '59.000đ',
-  },
-  {
-    id: 3,
-    image: 'https://image.cooky.vn/posproduct/g0/27150/s400x400/0c95078d-10cb-44c4-bd99-a4a10853f071.jpeg',
-    name: 'Hải Sản Tươi Sống Mix',
-    description: 'Tôm, mực, ngao tươi theo ngày',
-    price: '249.000đ',
-  },
-  {
-    id: 4,
-    image: 'https://image.cooky.vn/posproduct/g0/27150/s400x400/0c95078d-10cb-44c4-bd99-a4a10853f071.jpeg',
-    name: 'Thịt Cừu Úc Nhập Khẩu',
-    description: 'Không mùi, ngọt thịt, thái lát vừa ăn',
-    price: '199.000đ',
-  },
-  {
-    id: 5,
-    image: 'https://image.cooky.vn/posproduct/g0/27150/s400x400/0c95078d-10cb-44c4-bd99-a4a10853f071.jpeg',
-    name: 'Đậu Hũ Non Chiên Giòn',
-    description: 'Bên ngoài giòn, bên trong mềm mịn',
-    price: '49.000đ',
-  },
-  {
-    id: 6,
-    image: 'https://image.cooky.vn/posproduct/g0/27150/s400x400/0c95078d-10cb-44c4-bd99-a4a10853f071.jpeg',
-    name: 'Nước Lẩu Thái Chua Cay',
-    description: 'Chua cay đậm đà, hương vị đặc trưng',
-    price: '89.000đ',
-  },
-];
 
 const MenuInterface = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -59,6 +15,24 @@ const MenuInterface = () => {
 
   const dispatch = useDispatch();
   const { items: cartItems } = useSelector((state) => state.cart);
+
+  const { data: categories = [], isLoading: isCategoriesLoading } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => categoryAPI.getAll(),
+    staleTime: 1000 * 60 * 5,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
+  });
+
+  const categoryNames = (categories && categories.length) ? categories.map((c) => c.name) : [];
+  const activeCategory = categories && categories.length ? categories[activeTab] : null;
+
+  const { data: dishes = [], isLoading: isDishesLoading } = useQuery({
+    queryKey: ['dishes', activeCategory?._id || 'all'],
+    queryFn: () => dishAPI.getAll(activeCategory ? { category_id: activeCategory._id } : null),
+    enabled: true,
+    staleTime: 1000 * 60 * 2,
+  });
 
   const handleMobileTabChange = (index) => {
     setActiveTab(index);
@@ -79,7 +53,7 @@ const MenuInterface = () => {
     <>
       {/* ── Mobile: sticky horizontal tab bar (< md) ── */}
       <nav className="md:hidden sticky top-0 z-10 flex overflow-x-auto scrollbar-hide bg-white border-b border-gray-100 shrink-0">
-        {CATEGORIES.map((item, index) => (
+        {(categoryNames.length ? categoryNames : (isCategoriesLoading ? ['Đang tải...'] : ['Không có danh mục'])).map((item, index) => (
           <button
             key={index}
             ref={(el) => (mobilTabRefs.current[index] = el)}
@@ -99,7 +73,7 @@ const MenuInterface = () => {
       <div className="max-w-[1280px] mx-auto w-full px-3 py-3 md:px-6 md:py-6 lg:px-8 lg:py-8">
         {/* ── Tablet / Desktop: horizontal category pill bar (≥ md) ── */}
         <div className="hidden md:flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1 mb-6">
-          {CATEGORIES.map((item, index) => (
+          {(categoryNames.length ? categoryNames : (isCategoriesLoading ? ['Đang tải...'] : ['Không có danh mục'])).map((item, index) => (
             <button
               key={index}
               onClick={() => setActiveTab(index)}
@@ -117,23 +91,39 @@ const MenuInterface = () => {
         {/* Section heading */}
         <div className="flex items-center justify-between mb-3 md:mb-5">
           <h2 className="font-semibold text-gray-800 text-sm md:text-base lg:text-lg">
-            {CATEGORIES[activeTab]}
+            {categoryNames[activeTab] || (isCategoriesLoading ? 'Đang tải...' : 'Danh mục')}
           </h2>
-          <span className="text-xs text-gray-400 tabular-nums">{MOCK_DISHES.length} món</span>
+          <span className="text-xs text-gray-400 tabular-nums">{dishes.length} món</span>
         </div>
 
         {/* ── Dish grid: 1 col → 2 col tablet → 3 col desktop → 4 col wide ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 lg:gap-5">
-          {MOCK_DISHES.map((dish) => (
-            <FoodCard
-              key={`${dish.id}-${dish.name}`}
-              image={dish.image}
-              name={dish.name}
-              description={dish.description}
-              price={dish.price}
-              onAdd={() => handleAddItem(dish)}
-            />
-          ))}
+            {isDishesLoading ? (
+              // simple loading placeholders
+              Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="p-3">
+                  <div className="animate-pulse flex gap-3">
+                    <div className="bg-gray-200 w-24 h-24 rounded-xl md:w-full md:h-40" />
+                    <div className="flex-1">
+                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
+                      <div className="h-3 bg-gray-200 rounded w-1/2 mb-4" />
+                      <div className="h-6 bg-gray-200 rounded w-24" />
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              dishes.map((dish) => (
+                <FoodCard
+                  key={dish._id}
+                  image={dish.image}
+                  name={dish.name}
+                  description={dish.description}
+                  price={(dish.price || 0).toLocaleString('vi-VN') + 'đ'}
+                  onAdd={() => handleAddItem({ id: dish._id, name: dish.name, price: (dish.price || 0).toString(), image: dish.image, description: dish.description })}
+                />
+              ))
+            )}
         </div>
 
       </div>
