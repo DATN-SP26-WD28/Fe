@@ -35,3 +35,11 @@ export const deleteTable = async (id) => {
   const { data } = await axiosInstance.delete(`/tables/${id}`);
   return data;
 };
+/**
+ * Làm mới QR token cho bàn
+ * @param {string} id Table ID
+ */
+export const regenerateTableToken = async (id) => {
+  const { data } = await axiosInstance.patch(`/tables/${id}/regenerate-token`);
+  return data;
+};
