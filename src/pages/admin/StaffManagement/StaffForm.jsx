@@ -30,7 +30,7 @@ const StaffForm = ({
       >
         <Form.Item
           label="Tên nhân viên"
-          name="username"
+          name="name"
           rules={[{ required: true, message: 'Vui lòng nhập tên nhân viên' }]}
         >
           <Input placeholder="Nhập tên" />
