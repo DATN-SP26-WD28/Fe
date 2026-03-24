@@ -67,7 +67,7 @@ const StaffManagement = () => {
   const onEdit = (record) => {
     setEditingStaff(record)
     form.setFieldsValue({
-      name: record.name,
+      username: record.username || record.name,
       email: record.email,
       phone: record.phone,
       role: record.role,
@@ -75,15 +75,32 @@ const StaffManagement = () => {
     setVisibleModal(true)
   }
 
-  const onDelete = (key) => {
-    deleteMutation.mutate(key)
+  const onDelete = (record) => {
+    const staffId = record._id || record.id || record.key
+    if (!staffId) {
+      message.error('Không xác định được ID nhân viên để xóa')
+      return
+    }
+    deleteMutation.mutate(staffId)
   }
 
   const onFinish = async (values) => {
+    const payload = {
+      username: values.username?.trim(),
+      email: values.email?.trim().toLowerCase(),
+      phone: values.phone?.trim(),
+      role: values.role,
+    }
+
     if (editingStaff) {
-      updateMutation.mutate({ id: editingStaff.id || editingStaff.key, data: values })
+      const staffId = editingStaff._id || editingStaff.id || editingStaff.key
+      if (!staffId) {
+        message.error('Không xác định được ID nhân viên để cập nhật')
+        return
+      }
+      updateMutation.mutate({ id: staffId, data: payload })
     } else {
-      createMutation.mutate(values)
+      createMutation.mutate(payload)
     }
   }
 
@@ -102,8 +119,8 @@ const StaffManagement = () => {
     },
     {
       title: 'Tên nhân viên',
-      dataIndex: 'name',
-      key: 'name',
+      dataIndex: 'username',
+      key: 'username',
       render: (value) => <span className="font-medium">{value}</span>,
     },
     {
@@ -142,7 +159,7 @@ const StaffManagement = () => {
             title="Xác nhận xóa nhân viên này?"
             okText="Xóa"
             cancelText="Hủy"
-            onConfirm={() => onDelete(record.key ?? record.id)}
+            onConfirm={() => onDelete(record)}
           >
             <Button type="text" icon={<Trash2 size={18} />} title="Xóa" className="text-red-500" />
           </Popconfirm>
@@ -180,6 +197,7 @@ const StaffManagement = () => {
         handleCancel={handleCancel}
         onFinish={onFinish}
         editingStaff={editingStaff}
+        existingStaff={staff}
         form={form}
         confirmLoading={createMutation.isPending || updateMutation.isPending}
       />
