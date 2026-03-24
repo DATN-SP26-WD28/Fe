@@ -1,0 +1,30 @@
+[
+  {
+    "key": "1",
+    "name": "Nhân viên bàn",
+    "email": "waiter@gmail.com",
+    "phone": "0904837461",
+    "role": "waiter"
+  },
+  {
+    "key": "2",
+    "name": "Thu ngân",
+    "email": "cashier@gmail.com",
+    "phone": "0904837461",
+    "role": "cashier"
+  },
+  {
+    "key": "3",
+    "name": "Bếp",
+    "email": "chef@gmail.com",
+    "phone": "0904837461",
+    "role": "chef"
+  },
+  {
+    "key": "4",
+    "name": "Admin",
+    "email": "admin@gmail.com",
+    "phone": "0987654321",
+    "role": "admin"
+  }
+]

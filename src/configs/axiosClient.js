@@ -1,8 +1,8 @@
 import axios from 'axios'
 
 const axiosInstance = axios.create({
-  baseURL: 'https://api.example.com/',
-  timeout: 1000,
+  baseURL: import.meta.env.VITE_API_BACKEND_URL || 'http://localhost:8888',
+  timeout: 10000,
   headers: { 'X-Custom-Header': 'foobar' },
 })
 
@@ -10,7 +10,7 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
   (config) => {
     // Do something before request is sent
-    const token = localStorage.getItem('userToken') // Example: Get token from localStorage
+    const token = localStorage.getItem('token') // Example: Get token from localStorage
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -26,7 +26,7 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => {
     // Any status code that lie within the range of 2xx cause this function to trigger
-    return response
+    return response.data
   },
   (error) => {
     // Any status codes that falls outside the range of 2xx cause this function to trigger

@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react'
 import { Card, Statistic, Table, Tag, Progress, Avatar, List, Breadcrumb } from 'antd'
 
+const BRAND_COLOR = '#f07f29'
+
 const revenueData = [
   { key: '1', month: 'Jan', revenue: 12000, growth: 12 },
   { key: '2', month: 'Feb', revenue: 14500, growth: 8 },
@@ -48,7 +50,7 @@ const activities = [
   { id: 4, user: 'Trung', action: 'added 3 new users', time: '2h' },
 ]
 
-function k(v) {
+function formatVND(v) {
   return new Intl.NumberFormat('vi-VN').format(v)
 }
 
@@ -64,8 +66,8 @@ function Sparkline({ values }) {
     .join(' ')
 
   return (
-    <svg viewBox="0 0 100 40" className="w-full h-10">
-      <polyline points={points} fill="none" strokeWidth="2" />
+    <svg viewBox="0 0 100 40" className="w-full h-10 text-brand">
+      <polyline points={points} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   )
 }
@@ -108,28 +110,31 @@ export default function Dashboard() {
       dataIndex: 'total',
       key: 'total',
       align: 'right',
-      render: (v) => k(v),
+      render: (v) => formatVND(v),
       sorter: (a, b) => a.total - b.total,
     },
   ]
 
   return (
     <div className="h-full overflow-auto">
-      <section className="mb-3">
-        <h1 className="font-bold text-3xl mb-2">Trang tổng quan</h1>
-        <Breadcrumb items={[{ title: 'Trang chủ' }, { title: 'Trang tổng quan' }]} />
+      <section className="mb-6">
+        <Breadcrumb
+          className="mb-2"
+          items={[{ title: 'Trang chủ' }, { title: 'Trang tổng quan' }]}
+        />
+        <h1 className="font-bold text-2xl text-gray-800">Trang tổng quan</h1>
       </section>
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <Card className="shadow-sm rounded-2xl">
           <div className="flex items-start justify-between">
-            <Statistic title="Tổng doanh thu" value={k(revenue)} />
+            <Statistic title="Tổng doanh thu" value={formatVND(revenue)} />
             <div className="w-24">
               <Sparkline values={revenueData.map((d) => d.revenue)} />
             </div>
           </div>
-          <div className="mt-2 text-sm text-gray-500">6 tháng gần nhất</div>
+          <div className="mt-2 text-xs text-gray-400">6 tháng gần nhất</div>
         </Card>
 
         <Card className="shadow-sm rounded-2xl">
@@ -139,19 +144,19 @@ export default function Dashboard() {
               <Sparkline values={revenueData.map((d) => d.growth)} />
             </div>
           </div>
-          <div className="mt-2 text-sm text-gray-500">MoM</div>
+          <div className="mt-2 text-xs text-gray-400">MoM</div>
         </Card>
 
         <Card className="shadow-sm rounded-2xl">
           <Statistic title="Tỷ lệ hoàn thành KPI" value={86} suffix="%" />
           <div className="mt-4">
-            <Progress percent={86} showInfo={false} />
+            <Progress percent={86} showInfo={false} strokeColor={BRAND_COLOR} />
           </div>
         </Card>
 
         <Card className="shadow-sm rounded-2xl">
           <Statistic title="Khách hàng mới" value={324} />
-          <div className="mt-2 text-sm text-gray-500">trong 30 ngày</div>
+          <div className="mt-2 text-xs text-gray-400">trong 30 ngày</div>
         </Card>
       </div>
 
@@ -162,7 +167,7 @@ export default function Dashboard() {
             columns={columns}
             dataSource={orders}
             pagination={{ pageSize: 5 }}
-            className="rounded-xl"
+            size="small"
           />
         </Card>
 
@@ -174,14 +179,14 @@ export default function Dashboard() {
               renderItem={(item) => (
                 <List.Item>
                   <List.Item.Meta
-                    avatar={<Avatar>{item.user[0]}</Avatar>}
+                    avatar={<Avatar className="!bg-brand">{item.user[0]}</Avatar>}
                     title={
-                      <div className="flex items-center justify-between">
-                        <span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm">
                           <span className="font-medium">{item.user}</span>{' '}
                           <span className="text-gray-500">{item.action}</span>
                         </span>
-                        <span className="text-xs text-gray-400">{item.time}</span>
+                        <span className="text-xs text-gray-400 shrink-0">{item.time}</span>
                       </div>
                     }
                   />
@@ -197,21 +202,21 @@ export default function Dashboard() {
                   <span>Website Revamp</span>
                   <span className="text-gray-500">72%</span>
                 </div>
-                <Progress percent={72} showInfo={false} />
+                <Progress percent={72} showInfo={false} strokeColor={BRAND_COLOR} />
               </div>
               <div>
                 <div className="flex items-center justify-between text-sm mb-1">
                   <span>Mobile App</span>
                   <span className="text-gray-500">43%</span>
                 </div>
-                <Progress percent={43} showInfo={false} />
+                <Progress percent={43} showInfo={false} strokeColor={BRAND_COLOR} />
               </div>
               <div>
                 <div className="flex items-center justify-between text-sm mb-1">
                   <span>Data Pipeline</span>
                   <span className="text-gray-500">90%</span>
                 </div>
-                <Progress percent={90} showInfo={false} />
+                <Progress percent={90} showInfo={false} strokeColor={BRAND_COLOR} />
               </div>
             </div>
           </Card>

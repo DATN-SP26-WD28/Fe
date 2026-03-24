@@ -12,18 +12,16 @@ const AdminLayout = () => {
   const role = 'admin' // Data test quyền
 
   return (
-    <>
-      <Layout className="h-screen">
-        <Sidebar role={role} collapsed={collapsed} onCollapse={setCollapsed} />
-        <Layout>
-          <HeaderAdmin />
-          <Content className="p-4 md:p-6">
-            <Outlet />
-          </Content>
-          <FooterAdmin />
-        </Layout>
+    <Layout className="h-screen">
+      <Sidebar role={role} collapsed={collapsed} onCollapse={setCollapsed} />
+      <Layout>
+        <HeaderAdmin />
+        <Content className="p-4 md:p-6 overflow-auto">
+          <Outlet />
+        </Content>
+        <FooterAdmin />
       </Layout>
-    </>
+    </Layout>
   )
 }
 

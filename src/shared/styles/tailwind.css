@@ -1,15 +1,26 @@
 @import "tailwindcss";
 
-/* Tailwind v4 tự động quét các file trong dự án, 
-nhưng nếu nó không nhận, bạn có thể chỉ định thủ công như sau: */
 @source "../../**/*.{js,jsx,ts,tsx,html}";
 
-/* Các tùy chỉnh theme (nếu có) sẽ nằm trong block này */
 @theme {
-  --color-roosta-red: #e11d48;
+  /* Brand palette */
+  --color-brand:       #f07f29;
+  --color-brand-dark:  #c4641f;
+  --color-brand-light: #fde8d5;
+
+  /* Surfaces */
+  --color-surface:        #ffffff;
+  --color-surface-subtle: #f8f8f8;
+  --color-border:         #f0f0f0;
+
+  /* Legacy alias */
+  --color-roosta-red: #f07f29;
+
+  /* Typography */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Fix lỗi scrollbar cho menu bên trái */
+/* Scrollbar suppression */
 @utility scrollbar-hide {
   @media (pointer: fine) {
     &::-webkit-scrollbar {
@@ -18,4 +29,15 @@ nhưng nếu nó không nhận, bạn có thể chỉ định thủ công như s
   }
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Safe-area bottom padding (PWA / mobile notch) */
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Smooth scrolling baseline */
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
 }
