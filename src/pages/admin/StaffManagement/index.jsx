@@ -67,7 +67,7 @@ const StaffManagement = () => {
   const onEdit = (record) => {
     setEditingStaff(record)
     form.setFieldsValue({
-      name: record.name,
+      username: record.username,
       email: record.email,
       phone: record.phone,
       role: record.role,
@@ -81,7 +81,7 @@ const StaffManagement = () => {
 
   const onFinish = async (values) => {
     if (editingStaff) {
-      updateMutation.mutate({ id: editingStaff.id || editingStaff.key, data: values })
+      updateMutation.mutate({ id: editingStaff._id || editingStaff.id || editingStaff.key, data: values })
     } else {
       createMutation.mutate(values)
     }
@@ -102,8 +102,8 @@ const StaffManagement = () => {
     },
     {
       title: 'Tên nhân viên',
-      dataIndex: 'name',
-      key: 'name',
+      dataIndex: 'username',
+      key: 'username',
       render: (value) => <span className="font-medium">{value}</span>,
     },
     {
@@ -142,7 +142,7 @@ const StaffManagement = () => {
             title="Xác nhận xóa nhân viên này?"
             okText="Xóa"
             cancelText="Hủy"
-            onConfirm={() => onDelete(record.key ?? record.id)}
+            onConfirm={() => onDelete(record._id ?? record.id ?? record.key)}
           >
             <Button type="text" icon={<Trash2 size={18} />} title="Xóa" className="text-red-500" />
           </Popconfirm>
@@ -168,7 +168,7 @@ const StaffManagement = () => {
         <Table
           columns={columns}
           dataSource={staff}
-          rowKey={(record) => record.key ?? record.id}
+          rowKey={(record) => record._id ?? record.id ?? record.key}
           loading={isLoading}
           pagination={{ pageSize: 7 }}
           className="rounded-xl"
