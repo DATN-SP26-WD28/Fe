@@ -22,6 +22,7 @@ const StaffManagement = () => {
     queryKey: ['staff'],
     queryFn: fetchStaff,
   })
+  console.log('STAFF data from server:', staff);
 
   const createMutation = useMutation({
     mutationFn: createStaff,
@@ -67,7 +68,7 @@ const StaffManagement = () => {
   const onEdit = (record) => {
     setEditingStaff(record)
     form.setFieldsValue({
-      name: record.name,
+      username: record.username,
       email: record.email,
       phone: record.phone,
       role: record.role,
@@ -102,8 +103,8 @@ const StaffManagement = () => {
     },
     {
       title: 'Tên nhân viên',
-      dataIndex: 'name',
-      key: 'name',
+      dataIndex: 'username',
+      key: 'username',
       render: (value) => <span className="font-medium">{value}</span>,
     },
     {

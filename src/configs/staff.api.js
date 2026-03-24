@@ -4,8 +4,14 @@ import axiosInstance from './axiosClient';
  * Lấy danh sách tất cả nhân viên
  */
 export const fetchStaff = async () => {
-  const { data } = await axiosInstance.get('/staff');
-  return data; // Trả về mảng staff từ createResponse của backend
+  const response = await axiosInstance.get('/staff');
+  const staffList = response?.data || [];
+  return staffList.map((item, index) => ({
+    ...item,
+    username: item.username || item.name || '',
+    name: item.name || item.username || '',
+    key: item.key || item._id || index + 1,
+  }));
 };
 
 /**
@@ -13,7 +19,8 @@ export const fetchStaff = async () => {
  * @param {Object} staffData { name, email, phone, role }
  */
 export const createStaff = async (staffData) => {
-  const { data } = await axiosInstance.post('/staff', staffData);
+  const response = await axiosInstance.post('/staff', staffData);
+  const data = response?.data;
   return data;
 };
 
@@ -23,7 +30,8 @@ export const createStaff = async (staffData) => {
  * @param {Object} staffData { name, email, phone, role }
  */
 export const updateStaff = async (id, staffData) => {
-  const { data } = await axiosInstance.put(`/staff/${id}`, staffData);
+  const response = await axiosInstance.put(`/staff/${id}`, staffData);
+  const data = response?.data;
   return data;
 };
 
@@ -32,6 +40,7 @@ export const updateStaff = async (id, staffData) => {
  * @param {string} id Staff ID
  */
 export const deleteStaff = async (id) => {
-  const { data } = await axiosInstance.delete(`/staff/${id}`);
+  const response = await axiosInstance.delete(`/staff/${id}`);
+  const data = response?.data;
   return data;
 };
