@@ -1,5 +1,9 @@
 import FoodCard from '@/layouts/ClientLayout/components/FoodCard';
+import CartModal from '@/components/CartModal';
+import CartSummaryBar from '@/components/CartSummaryBar';
 import React, { useRef, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { addItem } from '@/redux/slices/cart.slices';
 
 const CATEGORIES = ['Món đặc sắc', 'Nước lẩu', 'Thịt bò & Cừu', 'Hải sản', 'Rau củ', 'Đồ uống'];
 
@@ -51,10 +55,24 @@ const MOCK_DISHES = [
 const MenuInterface = () => {
   const [activeTab, setActiveTab] = useState(0);
   const mobilTabRefs = useRef([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const dispatch = useDispatch();
+  const { items: cartItems } = useSelector((state) => state.cart);
 
   const handleMobileTabChange = (index) => {
     setActiveTab(index);
     mobilTabRefs.current[index]?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  };
+
+  const handleAddItem = (dish) => {
+    dispatch(addItem({
+      id: dish.id,
+      name: dish.name,
+      price: dish.price,
+      image: dish.image,
+      description: dish.description,
+    }));
   };
 
   return (
@@ -108,17 +126,31 @@ const MenuInterface = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 lg:gap-5">
           {MOCK_DISHES.map((dish) => (
             <FoodCard
-              key={dish.id}
+              key={`${dish.id}-${dish.name}`}
               image={dish.image}
               name={dish.name}
               description={dish.description}
               price={dish.price}
-              onAdd={() => {}}
+              onAdd={() => handleAddItem(dish)}
             />
           ))}
         </div>
 
       </div>
+
+      {/* Cart Summary Bar - Sticky Bottom */}
+      <CartSummaryBar
+        items={cartItems}
+        onClick={() => setIsModalOpen(true)}
+      />
+
+      {/* Cart Modal */}
+      <CartModal
+        items={cartItems}
+        isModalOpen={isModalOpen}
+        onCloseModal={() => setIsModalOpen(false)}
+      />
+
     </>
   );
 };
