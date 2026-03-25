@@ -1,23 +1,24 @@
 import { ShoppingBasket } from 'lucide-react'
 import React from 'react'
+import { parsePrice, formatCurrency } from '@/shared/utils/currency'
 
 const CartSummaryBar = ({ items, onClick }) => {
   if (items.length === 0) return null
 
   const totalPrice = items.reduce((sum, item) => {
-    const priceNum = parseInt(item.price.replace(/[^\d]/g, ''), 10)
+    const priceNum = Number(parsePrice(item.price) || 0)
     return sum + priceNum * item.quantity
   }, 0)
 
   const originalTotal = Math.ceil(totalPrice * 1.07)
 
-  const formatPrice = (price) => price.toLocaleString('vi-VN') + 'đ'
+  const formatPrice = (price) => formatCurrency(price)
 
   // Total items count
   const totalQty = items.reduce((sum, item) => sum + item.quantity, 0)
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3 shadow-2xl z-[60]">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3 shadow-2xl z-60">
       <div className="flex items-center gap-3">
         {/* Basket icon with badge */}
         <div

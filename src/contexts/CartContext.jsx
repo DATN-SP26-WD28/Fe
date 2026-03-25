@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { parsePrice } from '@/shared/utils/currency';
 
 const CartContext = createContext();
 
@@ -28,7 +29,9 @@ export const CartProvider = ({ children }) => {
                     item._id === product._id ? { ...item, quantity: item.quantity + 1 } : item
                 );
             }
-            return [...prevCart, { ...product, quantity: 1 }];
+            // Normalize price to number for consistent calculations
+            const normalized = { ...product, price: parsePrice(product.price) };
+            return [...prevCart, { ...normalized, quantity: 1 }];
         });
     }, []);
 

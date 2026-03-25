@@ -1,6 +1,7 @@
 import FoodCard from '@/layouts/ClientLayout/components/FoodCard';
 import CartModal from '@/components/CartModal';
 import CartSummaryBar from '@/components/CartSummaryBar';
+import { parsePrice, formatCurrency } from '@/shared/utils/currency';
 import React, { useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import categoryAPI from '@/configs/category.api';
@@ -70,7 +71,7 @@ const MenuInterface = () => {
       </nav>
 
       {/* ── Main content: fills full width on mobile, centered on md+ ── */}
-      <div className="max-w-[1280px] mx-auto w-full px-3 py-3 md:px-6 md:py-6 lg:px-8 lg:py-8">
+      <div className="max-w-7xl mx-auto w-full px-3 py-3 md:px-6 md:py-6 lg:px-8 lg:py-8">
         {/* ── Tablet / Desktop: horizontal category pill bar (≥ md) ── */}
         <div className="hidden md:flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1 mb-6">
           {(categoryNames.length ? categoryNames : (isCategoriesLoading ? ['Đang tải...'] : ['Không có danh mục'])).map((item, index) => (
@@ -119,8 +120,8 @@ const MenuInterface = () => {
                   image={dish.image}
                   name={dish.name}
                   description={dish.description}
-                  price={(dish.price || 0).toLocaleString('vi-VN') + 'đ'}
-                  onAdd={() => handleAddItem({ id: dish._id, name: dish.name, price: (dish.price || 0).toString(), image: dish.image, description: dish.description })}
+                  price={formatCurrency(dish.price)}
+                  onAdd={() => handleAddItem({ id: dish._id, name: dish.name, price: parsePrice(dish.price), image: dish.image, description: dish.description })}
                 />
               ))
             )}

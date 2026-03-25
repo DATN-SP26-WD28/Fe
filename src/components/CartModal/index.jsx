@@ -1,6 +1,7 @@
 import React from 'react'
 import { useDispatch } from 'react-redux'
 import { removeItem, updateQuantity, clearCart } from '@/redux/slices/cart.slices'
+import { parsePrice, formatCurrency } from '@/shared/utils/currency'
 import { FileTextOutlined, CloseOutlined } from '@ant-design/icons'
 
 const CartModal = ({ items, isModalOpen, onCloseModal }) => {
@@ -20,9 +21,9 @@ const CartModal = ({ items, isModalOpen, onCloseModal }) => {
     dispatch(updateQuantity({ id, quantity: currentQty + 1 }))
   }
 
-  const getPriceNum = (priceStr) => parseInt(priceStr.replace(/[^\d]/g, ''), 10)
+  const getPriceNum = (price) => Number(parsePrice(price) || 0)
 
-  const formatPrice = (price) => price.toLocaleString('vi-VN') + 'đ'
+  const formatPrice = (price) => formatCurrency(price)
 
   return (
     <>
