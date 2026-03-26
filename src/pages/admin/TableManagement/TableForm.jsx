@@ -1,5 +1,6 @@
 import React from 'react'
-import { Modal, Form, InputNumber, Select, Input, Row, Col } from 'antd'
+import { Modal, Form, InputNumber, Select, Input, Row, Col, Button, message } from 'antd'
+import { Copy } from 'lucide-react'
 
 const TableForm = ({ 
   isModalOpen, 
@@ -68,6 +69,25 @@ const TableForm = ({
         >
           <Input placeholder="Ví dụ: Tầng 1, Ngoài trời..." />
         </Form.Item>
+
+        {editingTable && editingTable.qr_code && (
+          <Form.Item label="Mã QR">
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Input readOnly value={editingTable.qr_code} disabled/>
+                <Button
+                  type="default"
+                  icon={<Copy size={14} />}
+                  onClick={() => {
+                    const text = editingTable.qr_code || ''
+                    if (!text) return
+                    navigator.clipboard?.writeText(text)
+                      .then(() => message.success('Đã sao chép mã QR'))
+                      .catch(() => message.error('Sao chép thất bại'))
+                  }}
+                />
+              </div>
+          </Form.Item>
+        )}
       </Form>
     </Modal>
   )

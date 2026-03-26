@@ -135,7 +135,6 @@ const TableManagement = () => {
               Tải xuống
             </Button>
           </div>
-          {qrCode && <small className="text-sm text-gray-500">{qrCode}</small>}
         </div>
       ),
     },
