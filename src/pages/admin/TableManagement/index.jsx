@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import { Card, Table, Tag, Breadcrumb, Button, QRCode, message, Popconfirm, Form } from 'antd'
-import { Edit, Trash2, Plus, Download } from 'lucide-react'
+import { Edit, Trash2, Plus, Download, RefreshCcw } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchTables, deleteTable, createTable, updateTable } from '@/configs/table.api'
+import { fetchTables, deleteTable, createTable, updateTable, regenerateTableToken } from '@/configs/table.api'
 import { downloadCanvasImage, composeQRCodeWithText } from '@/shared/utils/utils'
 import TableForm from './TableForm'
 
@@ -51,6 +51,17 @@ const TableManagement = () => {
     },
     onError: (err) => {
       message.error(err.response?.data?.message || 'Xóa bàn thất bại')
+    },
+  })
+
+  const regenerateTokenMutation = useMutation({
+    mutationFn: (id) => regenerateTableToken(id),
+    onSuccess: () => {
+      message.success('Làm mới mã QR thành công')
+      queryClient.invalidateQueries({ queryKey: ['tables'] })
+    },
+    onError: (err) => {
+      message.error(err.response?.data?.message || 'Làm mới thất bại')
     },
   })
 
@@ -173,6 +184,21 @@ const TableManagement = () => {
             className="text-blue-500" 
             onClick={() => showModal(record)}
           />
+          <Popconfirm
+            title="Làm mới mã QR"
+            description="Làm mới sẽ khiến mã QR cũ không còn hiệu lực. Bạn có chắc chắn?"
+            onConfirm={() => regenerateTokenMutation.mutate(record._id)}
+            okText="Làm mới"
+            cancelText="Hủy"
+          >
+            <Button 
+              type="text" 
+              icon={<RefreshCcw size={18} />} 
+              title="Làm mới QR" 
+              className="text-green-500" 
+              loading={regenerateTokenMutation.isPending && regenerateTokenMutation.variables === record._id}
+            />
+          </Popconfirm>
           <Popconfirm
             title="Xóa bàn"
             description="Bạn có chắc chắn muốn xóa bàn này?"

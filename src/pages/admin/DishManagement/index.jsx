@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import dishAPI from '@/configs/dish.api'
 import categoryAPI from '@/configs/category.api'
 import { truncateText } from '@/shared/utils/truncateText'
+import { formatCurrency } from '@/shared/utils/currency'
 import { CATEGORY_PLACEHOLDER_IMG } from '@/assets/images'
 import DishForm from './DishForm'
 
@@ -92,7 +93,7 @@ const DishManagement = () => {
     title: 'Giá',
     dataIndex: 'price',
     key: 'price',
-    render: (v) => <span>{v?.toLocaleString()}₫</span>,
+    render: (v) => <span>{formatCurrency(v)}</span>,
   },
   {
     title: 'Mô tả',

@@ -1,8 +1,9 @@
 import axiosInstance from './axiosClient';
+import { parsePrice } from '@/shared/utils/currency';
 
 const mapBackendDishToFrontend = (d) => {
   if (!d) return null;
-  const price = d.price == null ? 0 : Number(d.price);
+  const price = parsePrice(d.price);
   const categoryObj = d.category_id && typeof d.category_id === 'object' ? d.category_id : null;
   return {
     _id: d._id,
