@@ -18,7 +18,7 @@ const Login = () => {
       message.success('Mừng bạn trở lại với Roosta!')
 
       // 2. Chuyển hướng về trang chủ hoặc trang trước đó
-      navigate('/')
+      navigate('/admin')
     },
     onError: (error) => {
       const errorMsg = error.response?.data?.message || 'Đăng nhập thất bại!'
