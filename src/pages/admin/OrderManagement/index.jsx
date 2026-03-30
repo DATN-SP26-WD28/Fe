@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react'
-import { Card, Table, Tag, Breadcrumb, message } from 'antd'
+import { Card, Table, Tag, Breadcrumb, Button, message } from 'antd'
 import TableOrderManager from '@/components/TableOrderManager'
 import { CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, CreditCardOutlined, SyncOutlined } from '@ant-design/icons'
 import orderAPI from '@/configs/order.api'
+import OrderCreateModal from '@/components/OrderCreateModal'
 
 const OrderManagement = () => {
   // --- LOGIC DATA ---
   const [dataSource, setDataSource] = useState([])
   const [loading, setLoading] = useState(false)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
   const fetchOrders = async () => {
     setLoading(true)
@@ -98,8 +100,14 @@ const OrderManagement = () => {
       </section>
 
       <Card className="shadow-sm rounded-2xl xl:col-span-2">
+        <section className="flex justify-end mb-2">
+          <Button type="primary" onClick={() => setIsCreateModalOpen(true)}>
+            Thêm mới đơn hàng
+          </Button>
+        </section>
+
         <section className="flex justify-start items-stretch gap-4 flex-wrap py-4">
-          <TableOrderManager onRefresh={fetchOrders} />
+          <TableOrderManager orders={dataSource} />
         </section>
         <section className="gap-2 flex items-center mb-4">
           {STATUS_TAGS.map((t) => (
@@ -116,6 +124,15 @@ const OrderManagement = () => {
           className="rounded-xl"
         />
       </Card>
+
+      <OrderCreateModal
+        open={isCreateModalOpen}
+        onCancel={() => setIsCreateModalOpen(false)}
+        onSuccess={() => {
+          setIsCreateModalOpen(false)
+          fetchOrders()
+        }}
+      />
     </>
   )
 }

@@ -8,6 +8,11 @@ const orderAPI = {
         return axiosClient.post(PREFIX, data);
     },
 
+    // 1b. Admin/Nhân viên: Tạo đơn hàng cho bàn bất kỳ
+    createByStaff: (data) => {
+        return axiosClient.post(`${PREFIX}/staff-create`, data);
+    },
+
     // 2. Admin/Staff: Lấy toàn bộ danh sách đơn hàng (đã tích hợp Table & Guest)
     getAll: () => {
         return axiosClient.get(PREFIX);
