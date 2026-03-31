@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Card, Table, Tag, Breadcrumb, Button, message } from 'antd'
+import { Card, Table, Tag, Breadcrumb, Button, Select, message } from 'antd'
 import TableOrderManager from '@/components/TableOrderManager'
 import { CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, CreditCardOutlined, SyncOutlined } from '@ant-design/icons'
 import orderAPI from '@/configs/order.api'
@@ -10,6 +10,23 @@ const OrderManagement = () => {
   const [dataSource, setDataSource] = useState([])
   const [loading, setLoading] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [updatingOrderId, setUpdatingOrderId] = useState(null)
+
+  const STATUS_MAP = {
+    pending: { color: 'gold', label: 'Chờ xử lý' },
+    preparing: { color: 'blue', label: 'Đang nấu' },
+    ready: { color: 'geekblue', label: 'Sẵn sàng' },
+    served: { color: 'green', label: 'Đã phục vụ' },
+    canceled: { color: 'red', label: 'Đã hủy' },
+  }
+
+  const STATUS_OPTIONS = [
+    { value: 'pending', label: STATUS_MAP.pending.label },
+    { value: 'preparing', label: STATUS_MAP.preparing.label },
+    { value: 'ready', label: STATUS_MAP.ready.label },
+    { value: 'served', label: STATUS_MAP.served.label },
+    { value: 'canceled', label: STATUS_MAP.canceled.label },
+  ]
 
   const fetchOrders = async () => {
     setLoading(true)
@@ -36,7 +53,26 @@ const OrderManagement = () => {
   }, [])
 
   // Hàm đếm số lượng theo trạng thái để hiển thị lên Tag
-  const countStatus = (status) => dataSource.filter((item) => item.status === status).length
+  const countStatus = (statuses) => {
+    const targetStatuses = Array.isArray(statuses) ? statuses : [statuses]
+    return dataSource.filter((item) => targetStatuses.includes(item.status)).length
+  }
+
+  const handleUpdateStatus = async (orderId, nextStatus, currentStatus) => {
+    if (!orderId || nextStatus === currentStatus) return
+
+    setUpdatingOrderId(orderId)
+    try {
+      await orderAPI.updateStatus(orderId, nextStatus)
+      setDataSource((prev) => prev.map((item) => (item._id === orderId ? { ...item, status: nextStatus } : item)))
+      message.success('Cập nhật trạng thái thành công!')
+    } catch (error) {
+      message.error('Không thể cập nhật trạng thái đơn hàng!')
+      console.error(error)
+    } finally {
+      setUpdatingOrderId(null)
+    }
+  }
 
   // --- LOGIC COLUMNS (Sửa dataIndex để khớp với Backend populate) ---
   const columns = [
@@ -61,35 +97,36 @@ const OrderManagement = () => {
       render: (v) => <b className="text-orange-600">{v?.toLocaleString()}đ</b>,
     },
     {
-      title: 'Ghi chú',
-      dataIndex: 'note',
-      key: 'note',
-    },
-    {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => {
-        // Khớp với các enum status từ Backend của bạn
-        const map = {
-          pending: { color: 'gold', label: 'Chờ xử lý' },
-          preparing: { color: 'blue', label: 'Đang nấu' },
-          served: { color: 'green', label: 'Đã phục vụ' },
-          paid: { color: 'cyan', label: 'Đã thanh toán' },
-          cancelled: { color: 'red', label: 'Đã hủy' },
-        }
-        const config = map[status] || { color: 'default', label: status }
-        return <Tag color={config.color}>{config.label.toUpperCase()}</Tag>
+      render: (status, record) => {
+        const normalizedStatus =
+          status === 'cancelled' ? 'canceled' : status === 'preparing' ? 'preparing' : status
+        return (
+          <Select
+            value={normalizedStatus}
+            options={STATUS_OPTIONS}
+            loading={updatingOrderId === record._id}
+            onChange={(value) => handleUpdateStatus(record._id, value, normalizedStatus)}
+            style={{ minWidth: 150 }}
+          />
+        )
       },
+    },
+        {
+      title: 'Ghi chú',
+      dataIndex: 'note',
+      key: 'note',
     },
   ]
 
   const STATUS_TAGS = [
     { key: 'pending', color: 'default', icon: <ClockCircleOutlined />, label: 'Chờ xử lý', count: countStatus('pending') },
     { key: 'preparing', color: 'processing', icon: <SyncOutlined spin />, label: 'Đang nấu', count: countStatus('preparing') },
-    { key: 'cancelled', color: 'error', icon: <CloseCircleOutlined />, label: 'Từ chối', count: countStatus('cancelled') },
+    { key: 'ready', color: 'processing', icon: <SyncOutlined />, label: 'Sẵn sàng', count: countStatus('ready') },
     { key: 'served', color: 'success', icon: <CheckCircleOutlined />, label: 'Đã phục vụ', count: countStatus('served') },
-    { key: 'paid', color: 'cyan', icon: <CreditCardOutlined />, label: 'Đã thanh toán', count: countStatus('paid') },
+    { key: 'canceled', color: 'error', icon: <CloseCircleOutlined />, label: 'Đã hủy', count: countStatus(['canceled', 'cancelled']) },
   ]
 
   return (
