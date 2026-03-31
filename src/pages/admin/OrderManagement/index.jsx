@@ -123,7 +123,7 @@ const OrderManagement = () => {
 
   const STATUS_TAGS = [
     { key: 'pending', color: 'default', icon: <ClockCircleOutlined />, label: 'Chờ xử lý', count: countStatus('pending') },
-    { key: 'preparing', color: 'processing', icon: <SyncOutlined spin />, label: 'Đang nấu', count: countStatus('preparing') },
+    { key: 'preparing', color: 'warning', icon: <SyncOutlined spin />, label: 'Đang nấu', count: countStatus('preparing') },
     { key: 'ready', color: 'processing', icon: <SyncOutlined />, label: 'Sẵn sàng', count: countStatus('ready') },
     { key: 'served', color: 'success', icon: <CheckCircleOutlined />, label: 'Đã phục vụ', count: countStatus('served') },
     { key: 'canceled', color: 'error', icon: <CloseCircleOutlined />, label: 'Đã hủy', count: countStatus(['canceled', 'cancelled']) },
