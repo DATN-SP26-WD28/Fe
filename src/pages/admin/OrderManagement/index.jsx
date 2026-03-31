@@ -25,6 +25,14 @@ const getTableIdFromData = (orders = []) => {
   return firstOrderWithTable ? getTableIdFromOrder(firstOrderWithTable) : null
 }
 
+const BACKEND_BASE_URL = (import.meta.env.VITE_API_BACKEND_URL || 'http://localhost:8888').replace(/\/$/, '')
+
+const resolveImageUrl = (value) => {
+  if (!value || typeof value !== 'string') return ''
+  if (/^https?:\/\//i.test(value)) return value
+  return `${BACKEND_BASE_URL}${value.startsWith('/') ? '' : '/'}${value}`
+}
+
 const normalizeOrder = (order) => ({
   ...order,
   items: Array.isArray(order?.items) ? order.items : [],
@@ -44,6 +52,7 @@ const flattenOrdersToItemRows = (orders = []) => {
       tableNumber,
       customerName,
       dishName: item?.dish_id?.dish_name || 'Món không xác định',
+      dishImage: resolveImageUrl(item?.dish_id?.image || item?.dish_id?.thumbnail || item?.dish_id?.image_url || ''),
       quantity: Number(item?.quantity) || 0,
       price: Number(item?.price) || 0,
       itemStatus: normalizeOrderStatus(item?.status),
@@ -131,8 +140,12 @@ const OrderManagement = () => {
       title: 'Bàn số',
       dataIndex: 'tableNumber',
       key: 'table_number',
-      render: (v) => <span className="font-medium text-blue-600">{v || 'N/A'}</span>,
-      width: 100,
+      render: (v, record) => {
+        const tableLabel = v || 'N/A'
+        const orderCode = record?.orderId ? `#${String(record.orderId).slice(-6).toUpperCase()}` : 'N/A'
+        return <span className="font-medium text-blue-600">{`${tableLabel} (${orderCode})`}</span>
+      },
+      width: 150,
     },
     {
       title: 'Khách hàng',
@@ -141,29 +154,36 @@ const OrderManagement = () => {
       render: (v) => v || 'Khách vãng lai',
     },
     {
-      title: 'Mã đơn',
-      dataIndex: 'orderId',
-      key: 'order_id',
-      render: (v) => (v ? `#${String(v).slice(-6).toUpperCase()}` : 'N/A'),
-      width: 120,
-    },
-    {
       title: 'Món ăn',
       dataIndex: 'dishName',
       key: 'menu_item',
-      render: (v) => v || 'Món không xác định',
-    },
-    {
-      title: 'SL',
-      dataIndex: 'quantity',
-      key: 'quantity',
-      width: 70,
-    },
-    {
-      title: 'Đơn giá',
-      dataIndex: 'price',
-      key: 'price',
-      render: (v) => <b className="text-orange-600">{Number(v || 0).toLocaleString()}đ</b>,
+      render: (_, record) => {
+        const dishLabel = record?.dishName || 'Món không xác định'
+        const quantity = Number(record?.quantity) || 0
+        const price = Number(record?.price) || 0
+
+        return (
+          <div className="flex items-center gap-3 min-w-55">
+            {record?.dishImage ? (
+              <img
+                src={record.dishImage}
+                alt={dishLabel}
+                className="h-12 w-12 rounded-lg object-cover border border-slate-200"
+              />
+            ) : (
+              <div className="h-12 w-12 rounded-lg bg-slate-100 border border-slate-200" />
+            )}
+
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-slate-900 truncate">{dishLabel}</span>
+                <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-md">x{quantity}</span>
+              </div>
+              <div className="text-orange-600 italic font-semibold">{price.toLocaleString()} đ</div>
+            </div>
+          </div>
+        )
+      },
     },
     {
       title: 'Trạng thái',
