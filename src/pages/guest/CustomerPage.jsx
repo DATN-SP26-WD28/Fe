@@ -27,29 +27,40 @@ const CustomerPage = () => {
   const onFinish = async (values) => {
     const guestName = values.name.trim();
 
-    // Lấy token từ URL (?token=MxKWY0g...)
+    // 1. Lấy table_id từ URL (ví dụ: "1")
+    // Lưu ý: Trong Route của bạn có thể đang đặt là :tableId hoặc :id
+    // const { tableId } = useParams(); 
+
+    // 2. Lấy token từ Query String (?token=MxK...)
     const queryParams = new URLSearchParams(window.location.search);
     const qrToken = queryParams.get('token');
 
     setLoading(true);
     try {
+      // GỌI API VỚI TÊN TRƯỜNG KHỚP 100% VỚI BACKEND (table_number)
       const res = await guestAPI.login({
         username: guestName,
-        table_id: tableId, // Chính là số "1" lấy từ useParams
-        token: qrToken     // Token bảo mật quét từ QR
+        table_number: Number(tableId), // Chuyển "1" thành số 1
+        token: qrToken
       });
 
       if (res && res.data) {
-        localStorage.setItem('token', res.data.accessToken);
-        localStorage.setItem('refreshToken', res.data.refreshToken);
-        localStorage.setItem('guestInfo', JSON.stringify(res.data.guest));
+        const { accessToken, refreshToken, guest } = res.data;
 
-        message.success(`Chào mừng ${guestName}!`);
+        // Lưu trữ phiên đăng nhập
+        localStorage.setItem('token', accessToken);
+        localStorage.setItem('refreshToken', refreshToken);
+        localStorage.setItem('guestInfo', JSON.stringify(guest));
+
+        message.success(`Chào mừng ${guestName} đến với Roosta!`);
+
+        // Chuyển hướng đến menu của bàn số 1
         navigate(`/table-order/${tableId}/menu`);
       }
     } catch (error) {
-      const msg = error.response?.data?.message || "Lỗi đăng nhập!";
-      message.error(msg);
+      // Nhờ file index.js mới, lỗi sẽ hiện message tiếng Việt từ Backend
+      const errorMsg = error.response?.data?.message || 'Lỗi kết nối bàn!';
+      message.error(errorMsg);
     } finally {
       setLoading(false);
     }
