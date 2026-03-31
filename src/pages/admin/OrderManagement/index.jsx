@@ -1,44 +1,96 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Card, Table, Tag, Breadcrumb, Button, Select, message } from 'antd'
 import TableOrderManager from '@/components/TableOrderManager'
-import { CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, CreditCardOutlined, SyncOutlined } from '@ant-design/icons'
+import { CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, SyncOutlined } from '@ant-design/icons'
 import orderAPI from '@/configs/order.api'
+import orderItemAPI from '@/configs/orderItem.api'
 import OrderCreateModal from '@/components/OrderCreateModal'
+import {
+  ORDER_CANCELED_STATUSES,
+  ORDER_ITEM_STATUS,
+  ORDER_ITEM_STATUS_MAP,
+  ORDER_ITEM_STATUS_OPTIONS,
+  normalizeOrderStatus,
+} from '@/shared/constants/app.constants'
+
+const getTableIdFromOrder = (order) => {
+  const tableRef = order?.table_id
+  if (!tableRef) return null
+  if (typeof tableRef === 'string') return tableRef
+  return tableRef?._id || null
+}
+
+const getTableIdFromData = (orders = []) => {
+  const firstOrderWithTable = orders.find((order) => getTableIdFromOrder(order))
+  return firstOrderWithTable ? getTableIdFromOrder(firstOrderWithTable) : null
+}
+
+const normalizeOrder = (order) => ({
+  ...order,
+  items: Array.isArray(order?.items) ? order.items : [],
+  key: order?._id,
+})
+
+const flattenOrdersToItemRows = (orders = []) => {
+  return orders.flatMap((order) => {
+    const tableNumber = order?.table_id?.table_number || 'N/A'
+    const customerName = order?.guest_id?.username || 'Khách vãng lai'
+    const items = Array.isArray(order?.items) ? order.items : []
+
+    return items.map((item) => ({
+      key: `${order?._id}-${item?._id || item?.dish_id?._id || Math.random()}`,
+      orderId: order?._id,
+      itemId: item?._id,
+      tableNumber,
+      customerName,
+      dishName: item?.dish_id?.dish_name || 'Món không xác định',
+      quantity: Number(item?.quantity) || 0,
+      price: Number(item?.price) || 0,
+      itemStatus: normalizeOrderStatus(item?.status),
+      note: order?.note || '',
+      createdAt: order?.createdAt,
+    }))
+  })
+}
 
 const OrderManagement = () => {
   // --- LOGIC DATA ---
+  const [orders, setOrders] = useState([])
   const [dataSource, setDataSource] = useState([])
   const [loading, setLoading] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
-  const [updatingOrderId, setUpdatingOrderId] = useState(null)
+  const [updatingItemId, setUpdatingItemId] = useState(null)
+  const currentTableIdRef = useRef(null)
 
-  const STATUS_MAP = {
-    pending: { color: 'gold', label: 'Chờ xử lý' },
-    preparing: { color: 'blue', label: 'Đang nấu' },
-    ready: { color: 'geekblue', label: 'Sẵn sàng' },
-    served: { color: 'green', label: 'Đã phục vụ' },
-    canceled: { color: 'red', label: 'Đã hủy' },
-  }
-
-  const STATUS_OPTIONS = [
-    { value: 'pending', label: STATUS_MAP.pending.label },
-    { value: 'preparing', label: STATUS_MAP.preparing.label },
-    { value: 'ready', label: STATUS_MAP.ready.label },
-    { value: 'served', label: STATUS_MAP.served.label },
-    { value: 'canceled', label: STATUS_MAP.canceled.label },
-  ]
-
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await orderAPI.getAll()
+      let tableId = currentTableIdRef.current
+
+      // Nếu chưa có dữ liệu cục bộ thì bootstrap từ danh sách đơn hiện có
+      if (!tableId) {
+        const allOrdersRes = await orderAPI.getAll()
+        const allOrders = Array.isArray(allOrdersRes?.data) ? allOrdersRes.data : []
+        tableId = getTableIdFromData(allOrders)
+      }
+
+      if (!tableId) {
+        setDataSource([])
+        return
+      }
+
+      currentTableIdRef.current = tableId
+
+      const res = await orderAPI.getByTable(tableId)
       // Lưu ý: res ở đây là response đã qua axiosClient interceptor (trả về data)
       if (res && res.data) {
-        const formattedData = res.data.map((item) => ({
-          ...item,
-          key: item._id, // Ant Design Table cần key duy nhất
-        }))
-        setDataSource(formattedData)
+        const normalizedOrders = res.data.map((item) => normalizeOrder(item))
+        const syncedTableId = getTableIdFromData(normalizedOrders)
+        if (syncedTableId) {
+          currentTableIdRef.current = syncedTableId
+        }
+        setOrders(normalizedOrders)
+        setDataSource(flattenOrdersToItemRows(normalizedOrders))
       }
     } catch (error) {
       message.error('Không thể tải danh sách đơn hàng!')
@@ -46,75 +98,91 @@ const OrderManagement = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     fetchOrders()
-  }, [])
+  }, [fetchOrders])
 
   // Hàm đếm số lượng theo trạng thái để hiển thị lên Tag
   const countStatus = (statuses) => {
     const targetStatuses = Array.isArray(statuses) ? statuses : [statuses]
-    return dataSource.filter((item) => targetStatuses.includes(item.status)).length
+    return dataSource.filter((item) => targetStatuses.includes(item.itemStatus)).length
   }
 
-  const handleUpdateStatus = async (orderId, nextStatus, currentStatus) => {
-    if (!orderId || nextStatus === currentStatus) return
+  const handleUpdateStatus = async (itemId, nextStatus, currentStatus) => {
+    if (!itemId || nextStatus === currentStatus) return
 
-    setUpdatingOrderId(orderId)
+    setUpdatingItemId(itemId)
     try {
-      await orderAPI.updateStatus(orderId, nextStatus)
-      setDataSource((prev) => prev.map((item) => (item._id === orderId ? { ...item, status: nextStatus } : item)))
+      await orderItemAPI.updateStatus(itemId, nextStatus)
+      setDataSource((prev) => prev.map((item) => (item.itemId === itemId ? { ...item, itemStatus: nextStatus } : item)))
       message.success('Cập nhật trạng thái thành công!')
     } catch (error) {
       message.error('Không thể cập nhật trạng thái đơn hàng!')
       console.error(error)
     } finally {
-      setUpdatingOrderId(null)
+      setUpdatingItemId(null)
     }
   }
 
-  // --- LOGIC COLUMNS (Sửa dataIndex để khớp với Backend populate) ---
   const columns = [
     {
       title: 'Bàn số',
-      // Vì backend populate table_id nên lấy table_id.table_number
-      dataIndex: ['table_id', 'table_number'],
+      dataIndex: 'tableNumber',
       key: 'table_number',
-      render: (v) => <span className="font-medium text-blue-600">Bàn {v || 'N/A'}</span>,
+      render: (v) => <span className="font-medium text-blue-600">{v || 'N/A'}</span>,
+      width: 100,
     },
     {
       title: 'Khách hàng',
-      // Backend populate guest_id nên lấy guest_id.username
-      dataIndex: ['guest_id', 'username'],
+      dataIndex: 'customerName',
       key: 'customer',
       render: (v) => v || 'Khách vãng lai',
     },
     {
-      title: 'Tổng tiền',
-      dataIndex: 'total_amount',
-      key: 'total_amount',
-      render: (v) => <b className="text-orange-600">{v?.toLocaleString()}đ</b>,
+      title: 'Mã đơn',
+      dataIndex: 'orderId',
+      key: 'order_id',
+      render: (v) => (v ? `#${String(v).slice(-6).toUpperCase()}` : 'N/A'),
+      width: 120,
+    },
+    {
+      title: 'Món ăn',
+      dataIndex: 'dishName',
+      key: 'menu_item',
+      render: (v) => v || 'Món không xác định',
+    },
+    {
+      title: 'SL',
+      dataIndex: 'quantity',
+      key: 'quantity',
+      width: 70,
+    },
+    {
+      title: 'Đơn giá',
+      dataIndex: 'price',
+      key: 'price',
+      render: (v) => <b className="text-orange-600">{Number(v || 0).toLocaleString()}đ</b>,
     },
     {
       title: 'Trạng thái',
-      dataIndex: 'status',
+      dataIndex: 'itemStatus',
       key: 'status',
       render: (status, record) => {
-        const normalizedStatus =
-          status === 'cancelled' ? 'canceled' : status === 'preparing' ? 'preparing' : status
+        const normalizedStatus = normalizeOrderStatus(status)
         return (
           <Select
             value={normalizedStatus}
-            options={STATUS_OPTIONS}
-            loading={updatingOrderId === record._id}
-            onChange={(value) => handleUpdateStatus(record._id, value, normalizedStatus)}
+            options={ORDER_ITEM_STATUS_OPTIONS}
+            loading={updatingItemId === record.itemId}
+            onChange={(value) => handleUpdateStatus(record.itemId, value, normalizedStatus)}
             style={{ minWidth: 150 }}
           />
         )
       },
     },
-        {
+    {
       title: 'Ghi chú',
       dataIndex: 'note',
       key: 'note',
@@ -122,13 +190,44 @@ const OrderManagement = () => {
   ]
 
   const STATUS_TAGS = [
-    { key: 'pending', color: 'default', icon: <ClockCircleOutlined />, label: 'Chờ xử lý', count: countStatus('pending') },
-    { key: 'preparing', color: 'warning', icon: <SyncOutlined spin />, label: 'Đang nấu', count: countStatus('preparing') },
-    { key: 'ready', color: 'processing', icon: <SyncOutlined />, label: 'Sẵn sàng', count: countStatus('ready') },
-    { key: 'served', color: 'success', icon: <CheckCircleOutlined />, label: 'Đã phục vụ', count: countStatus('served') },
-    { key: 'canceled', color: 'error', icon: <CloseCircleOutlined />, label: 'Đã hủy', count: countStatus(['canceled', 'cancelled']) },
+    {
+      key: ORDER_ITEM_STATUS.pending,
+      color: 'default',
+      icon: <ClockCircleOutlined />,
+      label: ORDER_ITEM_STATUS_MAP[ORDER_ITEM_STATUS.pending].label,
+      count: countStatus(ORDER_ITEM_STATUS.pending),
+    },
+    {
+      key: ORDER_ITEM_STATUS.inProgress,
+      color: 'warning',
+      icon: <SyncOutlined spin />,
+      label: ORDER_ITEM_STATUS_MAP[ORDER_ITEM_STATUS.inProgress].label,
+      count: countStatus([ORDER_ITEM_STATUS.inProgress, 'preparing']),
+    },
+    {
+      key: ORDER_ITEM_STATUS.ready,
+      color: 'processing',
+      icon: <SyncOutlined />,
+      label: ORDER_ITEM_STATUS_MAP[ORDER_ITEM_STATUS.ready].label,
+      count: countStatus(ORDER_ITEM_STATUS.ready),
+    },
+    {
+      key: ORDER_ITEM_STATUS.served,
+      color: 'success',
+      icon: <CheckCircleOutlined />,
+      label: ORDER_ITEM_STATUS_MAP[ORDER_ITEM_STATUS.served].label,
+      count: countStatus(ORDER_ITEM_STATUS.served),
+    },
+    {
+      key: ORDER_ITEM_STATUS.canceled,
+      color: 'error',
+      icon: <CloseCircleOutlined />,
+      label: ORDER_ITEM_STATUS_MAP[ORDER_ITEM_STATUS.canceled].label,
+      count: countStatus(ORDER_CANCELED_STATUSES),
+    },
   ]
 
+  console.log('dataSource', dataSource)
   return (
     <>
       <section className="mb-3">
@@ -139,12 +238,12 @@ const OrderManagement = () => {
       <Card className="shadow-sm rounded-2xl xl:col-span-2">
         <section className="flex justify-end mb-2">
           <Button type="primary" onClick={() => setIsCreateModalOpen(true)}>
-            Thêm mới đơn hàng
+            Tạo đơn hàng
           </Button>
         </section>
 
         <section className="flex justify-start items-stretch gap-4 flex-wrap py-4">
-          <TableOrderManager orders={dataSource} />
+          <TableOrderManager orders={orders} />
         </section>
         <section className="gap-2 flex items-center mb-4">
           {STATUS_TAGS.map((t) => (

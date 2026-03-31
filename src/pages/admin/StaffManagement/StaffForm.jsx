@@ -1,5 +1,6 @@
 import React from 'react'
 import { Modal, Form, Input, Select } from 'antd'
+import { DEFAULT_STAFF_ROLE, STAFF_ROLE_VALUES, toRoleOptions } from '@/shared/constants/app.constants'
 
 const StaffForm = ({
   isModalOpen,
@@ -25,7 +26,7 @@ const StaffForm = ({
         form={form}
         layout="vertical"
         onFinish={onFinish}
-        initialValues={{ role: 'waiter' }}
+        initialValues={{ role: DEFAULT_STAFF_ROLE }}
         className="mt-4"
       >
         <Form.Item
@@ -60,17 +61,7 @@ const StaffForm = ({
           name="role"
           rules={[{ required: true, message: 'Vui lòng chọn vai trò' }]}
         >
-          <Select
-            options={Object.entries({
-              admin: { label: 'Quản trị viên' },
-              cashier: { label: 'Thu ngân' },
-              waiter: { label: 'Phục vụ' },
-              chef: { label: 'Nhân viên bếp' },
-            }).map(([value, { label }]) => ({
-              value,
-              label,
-            }))}
-          />
+          <Select options={toRoleOptions(STAFF_ROLE_VALUES)} />
         </Form.Item>
       </Form>
     </Modal>

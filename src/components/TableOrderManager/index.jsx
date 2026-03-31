@@ -3,15 +3,13 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Empty, Modal, Spin, Tag } from 'antd'
 import { fetchTables } from '@/configs/table.api'
 import orderAPI from '@/configs/order.api'
-
-const statusTagMap = {
-  pending: { color: 'gold', label: 'Chờ xử lý' },
-  preparing: { color: 'blue', label: 'Đang nấu' },
-  ready: { color: 'cyan', label: 'Sẵn sàng' },
-  served: { color: 'green', label: 'Đã phục vụ' },
-  completed: { color: 'success', label: 'Hoàn tất' },
-  canceled: { color: 'red', label: 'Đã hủy' },
-}
+import {
+  ORDER_ITEM_STATUS,
+  ORDER_ITEM_STATUS_MAP,
+  ORDER_PREPARING_STATUSES,
+  ORDER_SERVED_STATUSES,
+  normalizeOrderStatus,
+} from '@/shared/constants/app.constants'
 
 const getTableIdFromOrder = (order) => {
   const tableRef = order?.table_id
@@ -20,28 +18,26 @@ const getTableIdFromOrder = (order) => {
   return tableRef._id || null
 }
 
-const normalizeStatus = (status) => String(status || '').trim().toLowerCase()
-
 const aggregateItemStats = (orders = []) => {
   return orders.reduce(
     (acc, order) => {
-      const orderStatus = normalizeStatus(order?.status)
+      const orderStatus = normalizeOrderStatus(order?.status)
       const items = Array.isArray(order?.items) ? order.items : []
 
       if (!items.length) {
-        if (orderStatus === 'pending') acc.pending += 1
-        else if (['preparing', 'ready'].includes(orderStatus)) acc.preparing += 1
-        else if (['served', 'completed'].includes(orderStatus)) acc.served += 1
+        if (orderStatus === ORDER_ITEM_STATUS.pending) acc.pending += 1
+        else if (ORDER_PREPARING_STATUSES.includes(orderStatus)) acc.preparing += 1
+        else if (ORDER_SERVED_STATUSES.includes(orderStatus)) acc.served += 1
         return acc
       }
 
       items.forEach((item) => {
         const itemQty = Number(item?.quantity) || 0
-        const itemStatus = normalizeStatus(item?.status)
+        const itemStatus = normalizeOrderStatus(item?.status)
 
-        if (itemStatus === 'pending') acc.pending += itemQty
-        else if (['in_progress', 'preparing', 'ready'].includes(itemStatus)) acc.preparing += itemQty
-        else if (['served', 'completed'].includes(itemStatus)) acc.served += itemQty
+        if (itemStatus === ORDER_ITEM_STATUS.pending) acc.pending += itemQty
+        else if (ORDER_PREPARING_STATUSES.includes(itemStatus)) acc.preparing += itemQty
+        else if (ORDER_SERVED_STATUSES.includes(itemStatus)) acc.served += itemQty
       })
 
       return acc
@@ -235,7 +231,7 @@ const TableOrderManager = ({ orders = [] }) => {
           <div className='flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1'>
             {modalOrders.map((order) => {
               const codeTail = String(order?._id || '').slice(-6).toUpperCase()
-              const statusConfig = statusTagMap[order?.status] || {
+              const statusConfig = ORDER_ITEM_STATUS_MAP[normalizeOrderStatus(order?.status)] || {
                 color: 'default',
                 label: order?.status || 'Không rõ',
               }
