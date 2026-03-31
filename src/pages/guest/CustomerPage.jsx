@@ -35,7 +35,7 @@ const CustomerPage = () => {
     try {
       const res = await guestAPI.login({
         username: guestName,
-        table_id: tableId, // Chính là số "1" lấy từ useParams
+        table_number: tableId, // Chính là số "1" lấy từ useParams
         token: qrToken     // Token bảo mật quét từ QR
       });
 
