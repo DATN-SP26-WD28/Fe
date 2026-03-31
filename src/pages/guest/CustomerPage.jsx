@@ -1,16 +1,17 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Form, Input, Button, message } from 'antd'
 import { UserOutlined } from '@ant-design/icons'
 import { useNavigate, useParams } from 'react-router-dom'
+import guestAPI from '@/configs/guest.api'
 
 const CustomerPage = () => {
   const navigate = useNavigate()
   const { tableId } = useParams()
   const [form] = Form.useForm()
+  const [loading, setLoading] = useState(false) // Thêm loading cho nút bấm
 
   useEffect(() => {
     const savedUser = localStorage.getItem('user')
-
     if (savedUser) {
       try {
         const user = JSON.parse(savedUser)
@@ -23,12 +24,36 @@ const CustomerPage = () => {
     }
   }, [form])
 
-  const onFinish = (values) => {
-    const guestName = values.name.trim()
-    sessionStorage.setItem('guestName', guestName)
-    message.success(`Chào mừng ${guestName} đến với Roosta!`)
-    navigate(`/table-order/${tableId}/menu`)
-  }
+  const onFinish = async (values) => {
+    const guestName = values.name.trim();
+
+    // Lấy token từ URL (?token=MxKWY0g...)
+    const queryParams = new URLSearchParams(window.location.search);
+    const qrToken = queryParams.get('token');
+
+    setLoading(true);
+    try {
+      const res = await guestAPI.login({
+        username: guestName,
+        table_id: tableId, // Chính là số "1" lấy từ useParams
+        token: qrToken     // Token bảo mật quét từ QR
+      });
+
+      if (res && res.data) {
+        localStorage.setItem('token', res.data.accessToken);
+        localStorage.setItem('refreshToken', res.data.refreshToken);
+        localStorage.setItem('guestInfo', JSON.stringify(res.data.guest));
+
+        message.success(`Chào mừng ${guestName}!`);
+        navigate(`/table-order/${tableId}/menu`);
+      }
+    } catch (error) {
+      const msg = error.response?.data?.message || "Lỗi đăng nhập!";
+      message.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const onFinishFailed = () => {
     message.warning('Vui lòng nhập tên hợp lệ để tiếp tục.')
@@ -36,6 +61,7 @@ const CustomerPage = () => {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#fff7ef]">
+      {/* Giữ nguyên phần UI Background */}
       <div className="pointer-events-none absolute -top-28 -left-24 h-72 w-72 rounded-full bg-[#ffd9b5] blur-3xl" />
       <div className="pointer-events-none absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-[#ffc489] blur-3xl" />
 
@@ -89,6 +115,7 @@ const CustomerPage = () => {
               htmlType="submit"
               block
               size="large"
+              loading={loading} // Hiển thị vòng xoay khi đang gọi API
               className="mt-1 h-12! rounded-xl border-none! bg-[#f07f29]! text-sm! font-bold! uppercase tracking-wide shadow-[0_10px_24px_rgba(240,127,41,0.35)] transition-all hover:bg-[#cf6a20]!"
             >
               Bắt đầu gọi món
