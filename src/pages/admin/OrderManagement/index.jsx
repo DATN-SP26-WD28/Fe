@@ -1,10 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Card, Table, Tag, Breadcrumb, Button, Select, message } from 'antd'
+import OrderCreateModal from '@/components/OrderCreateModal'
 import TableOrderManager from '@/components/TableOrderManager'
-import { CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, SyncOutlined } from '@ant-design/icons'
 import orderAPI from '@/configs/order.api'
 import orderItemAPI from '@/configs/orderItem.api'
-import OrderCreateModal from '@/components/OrderCreateModal'
 import { OrderStatusProvider, useOrderStatus } from '@/contexts/OrderStatusContext'
 import {
   ORDER_CANCELED_STATUSES,
@@ -13,7 +10,11 @@ import {
   ORDER_ITEM_STATUS_OPTIONS,
   normalizeOrderStatus,
 } from '@/shared/constants/app.constants'
+import { CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, SyncOutlined } from '@ant-design/icons'
+import { App, Breadcrumb, Button, Card, Select, Table, Tag, message } from 'antd'; // Thêm App để sửa lỗi message context
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+// --- CÁC HÀM HELPER GIỮ NGUYÊN ---
 const getTableIdFromOrder = (order) => {
   const tableRef = order?.table_id
   if (!tableRef) return null
@@ -41,19 +42,24 @@ const normalizeOrder = (order) => ({
 })
 
 const flattenOrdersToItemRows = (orders = [], itemStatusById = {}) => {
+
+  if (!Array.isArray(orders)) return [];
+
   return orders.flatMap((order) => {
     const tableNumber = order?.table_id?.table_number || 'N/A'
     const customerName = order?.guest_id?.username || 'Khách vãng lai'
-    const items = Array.isArray(order?.items) ? order.items : []
+
+    // Backend trả về mảng items, đảm bảo nó tồn tại
+    const items = order?.items || []
 
     return items.map((item) => ({
-      key: `${order?._id}-${item?._id || item?.dish_id?._id || Math.random()}`,
+      key: item?._id || Math.random(),
       orderId: order?._id,
       itemId: item?._id,
       tableNumber,
       customerName,
       dishName: item?.dish_id?.dish_name || 'Món không xác định',
-      dishImage: resolveImageUrl(item?.dish_id?.image || item?.dish_id?.thumbnail || item?.dish_id?.image_url || ''),
+      dishImage: resolveImageUrl(item?.dish_id?.image_url || ''),
       quantity: Number(item?.quantity) || 0,
       price: Number(item?.price) || 0,
       itemStatus: normalizeOrderStatus(itemStatusById[item?._id] || item?.status),
@@ -64,78 +70,66 @@ const flattenOrdersToItemRows = (orders = [], itemStatusById = {}) => {
 }
 
 const OrderManagementContent = () => {
-  // --- LOGIC DATA ---
   const { orders, itemStatusById, hydrateOrders, applyItemStatusUpdate } = useOrderStatus()
   const [loading, setLoading] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [updatingItemId, setUpdatingItemId] = useState(null)
   const currentTableIdRef = useRef(null)
 
+  // DataSource này sẽ tự động tách từng món ăn ra thành 1 dòng trong bảng
   const dataSource = useMemo(() => flattenOrdersToItemRows(orders, itemStatusById), [orders, itemStatusById])
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
     try {
-      let tableId = currentTableIdRef.current
+      const res = await orderAPI.getAll()
 
-      // Nếu chưa có dữ liệu cục bộ thì bootstrap từ danh sách đơn hiện có
-      if (!tableId) {
-        const allOrdersRes = await orderAPI.getAll()
-        const allOrders = Array.isArray(allOrdersRes?.data) ? allOrdersRes.data : []
-        tableId = getTableIdFromData(allOrders)
-      }
+      // Kiểm tra kỹ: res.data thường là Object {status, message, data}
+      // Cái chúng ta cần là res.data.data (mảng các đơn hàng)
+      const actualOrders = res?.data?.data || res?.data || []
 
-      if (!tableId) {
-        hydrateOrders([])
-        return
-      }
-
-      currentTableIdRef.current = tableId
-
-      const res = await orderAPI.getByTable(tableId)
-      // Lưu ý: res ở đây là response đã qua axiosClient interceptor (trả về data)
-      if (res && res.data) {
-        const normalizedOrders = res.data.map((item) => normalizeOrder(item))
-        const syncedTableId = getTableIdFromData(normalizedOrders)
-        if (syncedTableId) {
-          currentTableIdRef.current = syncedTableId
-        }
+      if (Array.isArray(actualOrders)) {
+        const normalizedOrders = actualOrders.map((item) => normalizeOrder(item))
         hydrateOrders(normalizedOrders)
       }
     } catch (error) {
-      message.error('Không thể tải danh sách đơn hàng!')
-      console.error(error)
+      console.error("Lỗi fetch:", error)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [hydrateOrders])
 
   useEffect(() => {
     fetchOrders()
+    // Có thể thêm interval nếu muốn auto-refresh cho Admin
+    // const interval = setInterval(fetchOrders, 15000);
+    // return () => clearInterval(interval);
   }, [fetchOrders])
 
-  // Hàm đếm số lượng theo trạng thái để hiển thị lên Tag
   const countStatus = (statuses) => {
     const targetStatuses = Array.isArray(statuses) ? statuses : [statuses]
     return dataSource.filter((item) => targetStatuses.includes(item.itemStatus)).length
   }
 
+  // Cập nhật trạng thái cho TỪNG MÓN thông qua itemId
   const handleUpdateStatus = async (itemId, nextStatus, currentStatus) => {
     if (!itemId || nextStatus === currentStatus) return
 
     setUpdatingItemId(itemId)
     try {
+      // Gọi đến API của OrderItem để xử lý riêng lẻ món đó
       await orderItemAPI.updateStatus(itemId, nextStatus)
       applyItemStatusUpdate(itemId, nextStatus)
-      message.success('Cập nhật trạng thái thành công!')
+      message.success('Đã cập nhật trạng thái món ăn!')
     } catch (error) {
-      message.error('Không thể cập nhật trạng thái đơn hàng!')
+      message.error('Lỗi khi cập nhật trạng thái món!')
       console.error(error)
     } finally {
       setUpdatingItemId(null)
     }
   }
 
+  // --- GIỮ NGUYÊN COLUMNS ---
   const columns = [
     {
       title: 'Bàn số',
@@ -248,7 +242,7 @@ const OrderManagementContent = () => {
     },
   ]
 
-  console.log('dataSource', dataSource)
+  // --- UI GIỮ NGUYÊN ---
   return (
     <>
       <section className="flex justify-between items-end mb-2">
@@ -262,7 +256,6 @@ const OrderManagementContent = () => {
       </section>
 
       <Card className="shadow-sm rounded-2xl xl:col-span-2">
-
         <section className="flex justify-start items-stretch gap-4 flex-wrap py-4">
           <TableOrderManager />
         </section>
@@ -296,9 +289,11 @@ const OrderManagementContent = () => {
 
 const OrderManagement = () => {
   return (
-    <OrderStatusProvider>
-      <OrderManagementContent />
-    </OrderStatusProvider>
+    <App>
+      <OrderStatusProvider>
+        <OrderManagementContent />
+      </OrderStatusProvider>
+    </App>
   )
 }
 
