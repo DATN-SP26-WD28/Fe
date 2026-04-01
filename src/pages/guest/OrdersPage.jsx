@@ -7,27 +7,35 @@ import orderAPI from '@/configs/order.api'
 const formatCurrency = (v) => new Intl.NumberFormat('vi-VN').format(v) + 'đ'
 
 const OrdersPage = () => {
-  const { tableId } = useParams()
+  const { tableId } = useParams() // tableId lấy từ URL (ví dụ: "1")
   const navigate = useNavigate()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState({})
 
-  // 1. Hàm lấy dữ liệu từ Server
+  // 1. Hàm lấy dữ liệu từ Server (SỬA LOGIC Ở ĐÂY)
   const fetchOrders = async () => {
     try {
+      // Gọi API truyền tableId (số bàn) trực tiếp lên Backend mới
       const response = await orderAPI.getByTable(tableId)
-      // Lưu ý: Dữ liệu trả về cần được sắp xếp theo thời gian mới nhất
-      setOrders(response.data.reverse()) 
+
+      // Backend mới đã sort sẵn, nhưng nếu bạn muốn đảo ngược lại thì giữ reverse()
+      // Lưu ý: response.data lúc này là mảng ordersWithItems từ Backend
+      setOrders(response.data)
     } catch (error) {
       console.error("Lỗi fetch đơn hàng:", error)
-      message.error("Không thể tải danh sách đơn hàng")
+      // Chỉ hiện lỗi khi không phải lỗi 404 (chưa có đơn)
+      if (error.response?.status !== 404) {
+        message.error("Không thể tải danh sách đơn hàng")
+      } else {
+        setOrders([]) // Nếu 404 thì coi như chưa có đơn nào
+      }
     } finally {
       setLoading(false)
     }
   }
 
-  // 2. Tự động cập nhật mỗi 10 giây (để khách thấy trạng thái bếp thay đổi)
+  // 2. Tự động cập nhật mỗi 10 giây
   useEffect(() => {
     fetchOrders()
     const interval = setInterval(fetchOrders, 10000)
@@ -36,13 +44,13 @@ const OrdersPage = () => {
 
   const toggle = (id) => setOpen((s) => ({ ...s, [id]: !s[id] }))
 
-  // 3. Hàm hiển thị màu sắc theo trạng thái đơn hàng
+  // 3. Hàm hiển thị màu sắc theo trạng thái đơn hàng (Giữ nguyên)
   const getStatusStyle = (status) => {
     switch (status) {
-      case 'pending': return 'bg-orange-100 text-orange-600' // Bếp đã nhận
-      case 'confirmed': return 'bg-blue-100 text-blue-600'  // Đang nấu
-      case 'completed': return 'bg-green-100 text-green-700' // Đã ra món
-      case 'cancelled': return 'bg-red-100 text-red-600'    // Đã hủy
+      case 'pending': return 'bg-orange-100 text-orange-600'
+      case 'confirmed': return 'bg-blue-100 text-blue-600'
+      case 'completed': return 'bg-green-100 text-green-700'
+      case 'cancelled': return 'bg-red-100 text-red-600'
       default: return 'bg-gray-100 text-gray-600'
     }
   }
@@ -63,7 +71,7 @@ const OrdersPage = () => {
     <div className="p-4 max-w-[980px] mx-auto pb-24">
       {/* Header điều hướng */}
       <div className="flex items-center gap-3 mb-6">
-        <button 
+        <button
           onClick={() => navigate(-1)}
           className="p-2 hover:bg-gray-100 rounded-full transition-colors"
         >
@@ -74,7 +82,8 @@ const OrdersPage = () => {
 
       <div className="space-y-4">
         {orders.map((order) => {
-          const total = order.total_amount
+          // Lấy total_amount đã được Backend tính sẵn hoặc dùng total_price tùy Schema
+          const total = order.total_amount || 0
           const statusStyle = getStatusStyle(order.status)
           const timeFormatted = new Date(order.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
 
@@ -92,9 +101,9 @@ const OrdersPage = () => {
                     <span className="text-gray-300">•</span>
                     <p className="text-xs text-gray-500 font-medium">{timeFormatted}</p>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
-                    <span className="text-base font-black text-gray-800">{order.items.length} món</span>
+                    <span className="text-base font-black text-gray-800">{order.items?.length || 0} món</span>
                     <span className="text-gray-300">•</span>
                     <span className="text-base font-black text-orange-500 italic">{formatCurrency(total)}</span>
                   </div>
@@ -119,15 +128,15 @@ const OrdersPage = () => {
               {/* Chi tiết từng món trong đơn */}
               {open[order._id] && (
                 <div className="mt-4 border-t border-dashed border-gray-100 pt-4 space-y-4 animate-fadeIn">
-                  {order.items.map((it, idx) => (
+                  {order.items?.map((it, idx) => (
                     <div key={idx} className="flex items-center justify-between">
                       <div className="flex gap-3">
                         <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center font-bold text-orange-600 text-xs">
                           x{it.quantity}
                         </div>
                         <div>
-                          {/* Lưu ý: Nếu backend populate, hãy dùng it.dish_id.name */}
-                          <div className="font-bold text-gray-800 text-sm">{it.dish_id?.name || "Món ăn"}</div>
+                          {/* SỬA LOGIC HIỂN THỊ: Dùng dish_name thay vì name để khớp Backend */}
+                          <div className="font-bold text-gray-800 text-sm">{it.dish_id?.dish_name || "Món ăn"}</div>
                           <div className="text-[10px] text-gray-400 font-medium uppercase tracking-tighter">
                             Đơn giá: {formatCurrency(it.price)}
                           </div>
@@ -150,7 +159,7 @@ const OrdersPage = () => {
               </svg>
             </div>
             <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">Bạn chưa gọi món nào</p>
-            <button 
+            <button
               onClick={() => navigate(`/table-order/${tableId}/menu`)}
               className="mt-4 text-orange-500 font-black text-sm uppercase underline"
             >
@@ -162,12 +171,12 @@ const OrdersPage = () => {
 
       {/* Nút gọi thêm món cố định ở dưới */}
       <div className="fixed bottom-20 left-4 right-4 z-40">
-         <button 
-            onClick={() => navigate(`/table-order/${tableId}/menu`)}
-            className="w-full h-14 bg-orange-500 text-white rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-orange-200 active:scale-95 transition-all"
-         >
-            Gọi thêm món
-         </button>
+        <button
+          onClick={() => navigate(`/table-order/${tableId}/menu`)}
+          className="w-full h-14 bg-orange-500 text-white rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-orange-200 active:scale-95 transition-all"
+        >
+          Gọi thêm món
+        </button>
       </div>
     </div>
   )

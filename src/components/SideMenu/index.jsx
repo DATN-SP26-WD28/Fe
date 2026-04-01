@@ -1,8 +1,9 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { CloseOutlined } from '@ant-design/icons'
 
 const SideMenu = ({ isOpen, onClose }) => {
+  const {tableId} = useParams();
   return (
     <>
       {/* Overlay */}
@@ -32,7 +33,7 @@ const SideMenu = ({ isOpen, onClose }) => {
               <Link to="/menu" onClick={onClose} className="block px-3 py-2 rounded hover:bg-gray-100">Thực Đơn</Link>
             </li>
             <li>
-              <Link to="/orders" onClick={onClose} className="block px-3 py-2 rounded hover:bg-gray-100">Đơn hàng</Link>
+              <Link to={`/table-order/${tableId}/orders`} onClick={onClose} className="block px-3 py-2 rounded hover:bg-gray-100">Đơn hàng</Link>
             </li>
             <li>
               <button onClick={() => { /* TODO: implement logout */ onClose() }} className="w-full text-left px-3 py-2 rounded hover:bg-gray-100">Đăng Xuất</button>

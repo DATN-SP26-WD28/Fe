@@ -24,8 +24,8 @@ const orderAPI = {
     },
 
     // 4. Khách hàng: Xem lịch sử gọi món của bàn hiện tại
-    getByTable: (tableId) => {
-        return axiosClient.get(`${PREFIX}/table/${tableId}`);
+    getByTable: (tableNumber) => {
+        return axiosClient.get(`${PREFIX}/table/${tableNumber}`);
     },
 
     // 5. Admin/Bếp: Cập nhật trạng thái đơn hàng (Pending -> Preparing -> Served)
