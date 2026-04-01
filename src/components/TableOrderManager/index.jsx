@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Empty, Modal, Spin, Tag } from 'antd'
 import { fetchTables } from '@/configs/table.api'
 import orderAPI from '@/configs/order.api'
+import { useOrderStatus } from '@/contexts/OrderStatusContext'
 import {
   ORDER_ITEM_STATUS,
   ORDER_ITEM_STATUS_MAP,
@@ -18,7 +19,7 @@ const getTableIdFromOrder = (order) => {
   return tableRef._id || null
 }
 
-const aggregateItemStats = (orders = []) => {
+const aggregateItemStats = (orders = [], itemStatusById = {}) => {
   return orders.reduce(
     (acc, order) => {
       const orderStatus = normalizeOrderStatus(order?.status)
@@ -33,7 +34,7 @@ const aggregateItemStats = (orders = []) => {
 
       items.forEach((item) => {
         const itemQty = Number(item?.quantity) || 0
-        const itemStatus = normalizeOrderStatus(item?.status)
+        const itemStatus = normalizeOrderStatus(itemStatusById[item?._id] || item?.status)
 
         if (itemStatus === ORDER_ITEM_STATUS.pending) acc.pending += itemQty
         else if (ORDER_PREPARING_STATUSES.includes(itemStatus)) acc.preparing += itemQty
@@ -46,7 +47,8 @@ const aggregateItemStats = (orders = []) => {
   )
 }
 
-const TableOrderManager = ({ orders = [] }) => {
+const TableOrderManager = () => {
+  const { orders, itemStatusById } = useOrderStatus()
   const [tables, setTables] = useState([])
   const [tableItemStats, setTableItemStats] = useState({})
   const [open, setOpen] = useState(false)
@@ -92,7 +94,7 @@ const TableOrderManager = ({ orders = [] }) => {
           tables.map(async (table) => {
             const res = await orderAPI.getByTable(table._id)
             const tableOrders = Array.isArray(res?.data) ? res.data : []
-            return [String(table._id), aggregateItemStats(tableOrders)]
+            return [String(table._id), aggregateItemStats(tableOrders, itemStatusById)]
           }),
         )
 
@@ -109,7 +111,7 @@ const TableOrderManager = ({ orders = [] }) => {
     return () => {
       mounted = false
     }
-  }, [tables, orders])
+  }, [tables, orders, itemStatusById])
 
   const ordersByTable = useMemo(() => {
     return orders.reduce((acc, order) => {

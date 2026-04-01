@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Card, Table, Tag, Breadcrumb, Button, Select, message } from 'antd'
 import TableOrderManager from '@/components/TableOrderManager'
 import { CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, SyncOutlined } from '@ant-design/icons'
 import orderAPI from '@/configs/order.api'
 import orderItemAPI from '@/configs/orderItem.api'
 import OrderCreateModal from '@/components/OrderCreateModal'
+import { OrderStatusProvider, useOrderStatus } from '@/contexts/OrderStatusContext'
 import {
   ORDER_CANCELED_STATUSES,
   ORDER_ITEM_STATUS,
@@ -39,7 +40,7 @@ const normalizeOrder = (order) => ({
   key: order?._id,
 })
 
-const flattenOrdersToItemRows = (orders = []) => {
+const flattenOrdersToItemRows = (orders = [], itemStatusById = {}) => {
   return orders.flatMap((order) => {
     const tableNumber = order?.table_id?.table_number || 'N/A'
     const customerName = order?.guest_id?.username || 'Khách vãng lai'
@@ -55,21 +56,22 @@ const flattenOrdersToItemRows = (orders = []) => {
       dishImage: resolveImageUrl(item?.dish_id?.image || item?.dish_id?.thumbnail || item?.dish_id?.image_url || ''),
       quantity: Number(item?.quantity) || 0,
       price: Number(item?.price) || 0,
-      itemStatus: normalizeOrderStatus(item?.status),
+      itemStatus: normalizeOrderStatus(itemStatusById[item?._id] || item?.status),
       note: order?.note || '',
       createdAt: order?.createdAt,
     }))
   })
 }
 
-const OrderManagement = () => {
+const OrderManagementContent = () => {
   // --- LOGIC DATA ---
-  const [orders, setOrders] = useState([])
-  const [dataSource, setDataSource] = useState([])
+  const { orders, itemStatusById, hydrateOrders, applyItemStatusUpdate } = useOrderStatus()
   const [loading, setLoading] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [updatingItemId, setUpdatingItemId] = useState(null)
   const currentTableIdRef = useRef(null)
+
+  const dataSource = useMemo(() => flattenOrdersToItemRows(orders, itemStatusById), [orders, itemStatusById])
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
@@ -84,7 +86,7 @@ const OrderManagement = () => {
       }
 
       if (!tableId) {
-        setDataSource([])
+        hydrateOrders([])
         return
       }
 
@@ -98,8 +100,7 @@ const OrderManagement = () => {
         if (syncedTableId) {
           currentTableIdRef.current = syncedTableId
         }
-        setOrders(normalizedOrders)
-        setDataSource(flattenOrdersToItemRows(normalizedOrders))
+        hydrateOrders(normalizedOrders)
       }
     } catch (error) {
       message.error('Không thể tải danh sách đơn hàng!')
@@ -125,7 +126,7 @@ const OrderManagement = () => {
     setUpdatingItemId(itemId)
     try {
       await orderItemAPI.updateStatus(itemId, nextStatus)
-      setDataSource((prev) => prev.map((item) => (item.itemId === itemId ? { ...item, itemStatus: nextStatus } : item)))
+      applyItemStatusUpdate(itemId, nextStatus)
       message.success('Cập nhật trạng thái thành công!')
     } catch (error) {
       message.error('Không thể cập nhật trạng thái đơn hàng!')
@@ -250,20 +251,20 @@ const OrderManagement = () => {
   console.log('dataSource', dataSource)
   return (
     <>
-      <section className="mb-3">
-        <h1 className="font-bold text-3xl mb-2">Quản lý đơn hàng</h1>
-        <Breadcrumb items={[{ title: 'Trang chủ' }, { title: 'Quản lý đơn hàng' }]} />
+      <section className="flex justify-between items-end mb-2">
+        <section className="mb-3">
+          <h1 className="font-bold text-3xl mb-2">Quản lý đơn hàng</h1>
+          <Breadcrumb items={[{ title: 'Trang chủ' }, { title: 'Quản lý đơn hàng' }]} />
+        </section>
+        <Button type="primary" onClick={() => setIsCreateModalOpen(true)}>
+          Tạo đơn hàng
+        </Button>
       </section>
 
       <Card className="shadow-sm rounded-2xl xl:col-span-2">
-        <section className="flex justify-end mb-2">
-          <Button type="primary" onClick={() => setIsCreateModalOpen(true)}>
-            Tạo đơn hàng
-          </Button>
-        </section>
 
         <section className="flex justify-start items-stretch gap-4 flex-wrap py-4">
-          <TableOrderManager orders={orders} />
+          <TableOrderManager />
         </section>
         <section className="gap-2 flex items-center mb-4">
           {STATUS_TAGS.map((t) => (
@@ -290,6 +291,14 @@ const OrderManagement = () => {
         }}
       />
     </>
+  )
+}
+
+const OrderManagement = () => {
+  return (
+    <OrderStatusProvider>
+      <OrderManagementContent />
+    </OrderStatusProvider>
   )
 }
 
