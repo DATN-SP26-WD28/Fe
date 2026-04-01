@@ -1,5 +1,6 @@
 import React from 'react'
 import { Modal, Form, Input, Select } from 'antd'
+import { DEFAULT_USER_ROLE, USER_ROLE_VALUES, toRoleOptions } from '@/shared/constants/app.constants'
 
 const UserForm = ({
   isModalOpen,
@@ -25,7 +26,7 @@ const UserForm = ({
         form={form}
         layout="vertical"
         onFinish={onFinish}
-        initialValues={{ role: 'customer' }}
+        initialValues={{ role: DEFAULT_USER_ROLE }}
         className="mt-4"
       >
         <Form.Item
@@ -60,18 +61,7 @@ const UserForm = ({
           name="role"
           rules={[{ required: true, message: 'Vui lòng chọn vai trò' }]}
         >
-          <Select
-            options={Object.entries({
-              admin: { label: 'Quản trị viên' },
-              cashier: { label: 'Thu ngân' },
-              waiter: { label: 'Phục vụ' },
-              chef: { label: 'Nhân viên bếp' },
-              customer: { label: 'Khách hàng' },
-            }).map(([value, { label }]) => ({
-              value,
-              label,
-            }))}
-          />
+          <Select options={toRoleOptions(USER_ROLE_VALUES)} />
         </Form.Item>
       </Form>
     </Modal>

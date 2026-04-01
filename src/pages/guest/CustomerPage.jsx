@@ -1,16 +1,17 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Form, Input, Button, message } from 'antd'
 import { UserOutlined } from '@ant-design/icons'
 import { useNavigate, useParams } from 'react-router-dom'
+import guestAPI from '@/configs/guest.api'
 
 const CustomerPage = () => {
   const navigate = useNavigate()
   const { tableId } = useParams()
   const [form] = Form.useForm()
+  const [loading, setLoading] = useState(false) // Thêm loading cho nút bấm
 
   useEffect(() => {
     const savedUser = localStorage.getItem('user')
-
     if (savedUser) {
       try {
         const user = JSON.parse(savedUser)
@@ -23,12 +24,47 @@ const CustomerPage = () => {
     }
   }, [form])
 
-  const onFinish = (values) => {
-    const guestName = values.name.trim()
-    sessionStorage.setItem('guestName', guestName)
-    message.success(`Chào mừng ${guestName} đến với Roosta!`)
-    navigate(`/table-order/${tableId}/menu`)
-  }
+  const onFinish = async (values) => {
+    const guestName = values.name.trim();
+
+    // 1. Lấy table_id từ URL (ví dụ: "1")
+    // Lưu ý: Trong Route của bạn có thể đang đặt là :tableId hoặc :id
+    // const { tableId } = useParams(); 
+
+    // 2. Lấy token từ Query String (?token=MxK...)
+    const queryParams = new URLSearchParams(window.location.search);
+    const qrToken = queryParams.get('token');
+
+    setLoading(true);
+    try {
+      // GỌI API VỚI TÊN TRƯỜNG KHỚP 100% VỚI BACKEND (table_number)
+      const res = await guestAPI.login({
+        username: guestName,
+        table_number: Number(tableId), // Chuyển "1" thành số 1
+        token: qrToken
+      });
+
+      if (res && res.data) {
+        const { accessToken, refreshToken, guest } = res.data;
+
+        // Lưu trữ phiên đăng nhập
+        localStorage.setItem('token', accessToken);
+        localStorage.setItem('refreshToken', refreshToken);
+        localStorage.setItem('guestInfo', JSON.stringify(guest));
+
+        message.success(`Chào mừng ${guestName} đến với Roosta!`);
+
+        // Chuyển hướng đến menu của bàn số 1
+        navigate(`/table-order/${tableId}/menu`);
+      }
+    } catch (error) {
+      // Nhờ file index.js mới, lỗi sẽ hiện message tiếng Việt từ Backend
+      const errorMsg = error.response?.data?.message || 'Lỗi kết nối bàn!';
+      message.error(errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const onFinishFailed = () => {
     message.warning('Vui lòng nhập tên hợp lệ để tiếp tục.')
@@ -36,6 +72,7 @@ const CustomerPage = () => {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#fff7ef]">
+      {/* Giữ nguyên phần UI Background */}
       <div className="pointer-events-none absolute -top-28 -left-24 h-72 w-72 rounded-full bg-[#ffd9b5] blur-3xl" />
       <div className="pointer-events-none absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-[#ffc489] blur-3xl" />
 
@@ -89,6 +126,7 @@ const CustomerPage = () => {
               htmlType="submit"
               block
               size="large"
+              loading={loading} // Hiển thị vòng xoay khi đang gọi API
               className="mt-1 h-12! rounded-xl border-none! bg-[#f07f29]! text-sm! font-bold! uppercase tracking-wide shadow-[0_10px_24px_rgba(240,127,41,0.35)] transition-all hover:bg-[#cf6a20]!"
             >
               Bắt đầu gọi món

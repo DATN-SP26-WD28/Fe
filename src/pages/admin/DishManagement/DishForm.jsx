@@ -5,6 +5,11 @@ const DishForm = ({ isModalOpen, handleCancel, onFinish, editingDish, categories
   const [form] = Form.useForm()
 
   useEffect(() => {
+    if (!isModalOpen) {
+      form.resetFields()
+      return
+    }
+
     if (editingDish) {
       form.setFieldsValue({
         name: editingDish.name,
@@ -14,10 +19,11 @@ const DishForm = ({ isModalOpen, handleCancel, onFinish, editingDish, categories
         status: editingDish.status || 'available',
         categoryId: editingDish.category?._id || (editingDish.category_id && (editingDish.category_id._id || editingDish.category_id.id)) || undefined,
       })
-    } else {
-      form.resetFields()
+      return
     }
-  }, [editingDish])
+
+    form.resetFields()
+  }, [editingDish, isModalOpen, form])
 
   return (
     <Modal

@@ -3,14 +3,8 @@ import { Card, Table, Tag, Breadcrumb, Button, Form, Popconfirm, Space, message 
 import { Edit, Trash2, Plus } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchStaff, deleteStaff, createStaff, updateStaff } from '@/configs/staff.api'
+import { ROLE_LABEL_MAP } from '@/shared/constants/app.constants'
 import StaffForm from './StaffForm'
-
-const roleLabelMap = {
-  admin: { label: 'Quản trị viên', color: 'geekblue' },
-  cashier: { label: 'Thu ngân', color: 'green' },
-  waiter: { label: 'Phục vụ', color: 'cyan' },
-  chef: { label: 'Nhân viên bếp', color: 'orange' },
-}
 
 const StaffManagement = () => {
   const queryClient = useQueryClient()
@@ -121,7 +115,7 @@ const StaffManagement = () => {
       dataIndex: 'role',
       key: 'role',
       render: (role) => {
-        const config = roleLabelMap[role] || { label: role || '-', color: 'default' }
+        const config = ROLE_LABEL_MAP[role] || { label: role || '-', color: 'default' }
         return <Tag color={config.color}>{config.label}</Tag>
       },
     },
