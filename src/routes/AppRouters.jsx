@@ -3,6 +3,9 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import AdminLayout from '../layouts/AdminLayout'
 import ClientLayout from '@/layouts/ClientLayout'
 import GuestLayout from '@/layouts/GuestLayout'
+import ProtectedRoute from './ProtectedRoute'
+import PublicRoute from './PublicRoute'
+import { ADMIN_ALLOWED_ROLES } from '@/shared/utils/authSession'
 // Admin pages
 import Dashboard from '@/pages/admin/Dashboard'
 import CategoryManagement from '@/pages/admin/CategoryManagement'
@@ -32,8 +35,22 @@ const AppRoutes = () => {
       <Routes>
         <Route path="/">
           <Route index element={<Navigate to="login" replace />} />
-          <Route path="login" element={<Login />} />
-          <Route path="register" element={<Register />} />
+          <Route
+            path="login"
+            element={
+              <PublicRoute>
+                <Login />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="register"
+            element={
+              <PublicRoute>
+                <Register />
+              </PublicRoute>
+            }
+          />
         </Route>
         {/* Guest: Khách hàng quét QR */}
         <Route path="/table/:tableId" element={<CustomerPage />} />
@@ -45,16 +62,18 @@ const AppRoutes = () => {
           <Route path="call-staff" element={<CallStaffPage />} />
         </Route>
         {/* Admin: Quản trị viên */}
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="categories" element={<CategoryManagement />} />
-          <Route path="dishes" element={<DishManagement />} />
-          <Route path="tables" element={<TableManagement />} />
-          <Route path="orders" element={<OrderManagement />} />
-          <Route path="payment-and-billing" element={<PaymentAndBill />} />
-          <Route path="reviews" element={<ReviewManagement />} />
-          <Route path="staffs" element={<StaffManagement />} />
-          <Route path="users" element={<UserManagement />} />
+        <Route element={<ProtectedRoute allowedRoles={ADMIN_ALLOWED_ROLES} />}>
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="categories" element={<CategoryManagement />} />
+            <Route path="dishes" element={<DishManagement />} />
+            <Route path="tables" element={<TableManagement />} />
+            <Route path="orders" element={<OrderManagement />} />
+            <Route path="payment-and-billing" element={<PaymentAndBill />} />
+            <Route path="reviews" element={<ReviewManagement />} />
+            <Route path="staffs" element={<StaffManagement />} />
+            <Route path="users" element={<UserManagement />} />
+          </Route>
         </Route>
         {/* Global Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
