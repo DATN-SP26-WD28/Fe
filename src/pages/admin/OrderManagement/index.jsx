@@ -11,8 +11,8 @@ import {
   normalizeOrderStatus,
 } from '@/shared/constants/app.constants'
 import { CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, SyncOutlined } from '@ant-design/icons'
-import { App, Breadcrumb, Button, Card, Select, Table, Tag, message } from 'antd'; // Thêm App để sửa lỗi message context
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { App, Breadcrumb, Button, Card, Select, Table, Tag, message } from 'antd'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 // --- CÁC HÀM HELPER GIỮ NGUYÊN ---
 const getTableIdFromOrder = (order) => {
@@ -42,14 +42,10 @@ const normalizeOrder = (order) => ({
 })
 
 const flattenOrdersToItemRows = (orders = [], itemStatusById = {}) => {
-
   if (!Array.isArray(orders)) return [];
-
   return orders.flatMap((order) => {
     const tableNumber = order?.table_id?.table_number || 'N/A'
     const customerName = order?.guest_id?.username || 'Khách vãng lai'
-
-    // Backend trả về mảng items, đảm bảo nó tồn tại
     const items = order?.items || []
 
     return items.map((item) => ({
@@ -74,20 +70,33 @@ const OrderManagementContent = () => {
   const [loading, setLoading] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [updatingItemId, setUpdatingItemId] = useState(null)
-  const currentTableIdRef = useRef(null)
 
-  // DataSource này sẽ tự động tách từng món ăn ra thành 1 dòng trong bảng
-  const dataSource = useMemo(() => flattenOrdersToItemRows(orders, itemStatusById), [orders, itemStatusById])
+  // --- MỚI: State lưu trạng thái lọc ---
+  const [filterStatus, setFilterStatus] = useState(null);
+
+  // DataSource được tính toán lại khi orders thay đổi HOẶC khi nhấn Filter
+  const dataSource = useMemo(() => {
+    const allRows = flattenOrdersToItemRows(orders, itemStatusById);
+
+    if (!filterStatus) return allRows;
+
+    // Logic lọc: Nếu chọn "Đang nấu" thì lọc cả 'inProgress' và 'preparing'
+    if (filterStatus === ORDER_ITEM_STATUS.inProgress) {
+      return allRows.filter(row => [ORDER_ITEM_STATUS.inProgress, 'preparing'].includes(row.itemStatus));
+    }
+    // Nếu chọn "Đã hủy" thì lọc tất cả các trạng thái hủy
+    if (filterStatus === ORDER_ITEM_STATUS.canceled) {
+      return allRows.filter(row => ORDER_CANCELED_STATUSES.includes(row.itemStatus));
+    }
+
+    return allRows.filter(row => row.itemStatus === filterStatus);
+  }, [orders, itemStatusById, filterStatus])
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
     try {
       const res = await orderAPI.getAll()
-
-      // Kiểm tra kỹ: res.data thường là Object {status, message, data}
-      // Cái chúng ta cần là res.data.data (mảng các đơn hàng)
       const actualOrders = res?.data?.data || res?.data || []
-
       if (Array.isArray(actualOrders)) {
         const normalizedOrders = actualOrders.map((item) => normalizeOrder(item))
         hydrateOrders(normalizedOrders)
@@ -101,35 +110,29 @@ const OrderManagementContent = () => {
 
   useEffect(() => {
     fetchOrders()
-    // Có thể thêm interval nếu muốn auto-refresh cho Admin
-    // const interval = setInterval(fetchOrders, 15000);
-    // return () => clearInterval(interval);
   }, [fetchOrders])
 
   const countStatus = (statuses) => {
     const targetStatuses = Array.isArray(statuses) ? statuses : [statuses]
-    return dataSource.filter((item) => targetStatuses.includes(item.itemStatus)).length
+    // Lưu ý: Đếm trên dữ liệu GỐC (toàn bộ) chứ không đếm trên dữ liệu đã lọc
+    const allRows = flattenOrdersToItemRows(orders, itemStatusById);
+    return allRows.filter((item) => targetStatuses.includes(item.itemStatus)).length
   }
 
-  // Cập nhật trạng thái cho TỪNG MÓN thông qua itemId
   const handleUpdateStatus = async (itemId, nextStatus, currentStatus) => {
     if (!itemId || nextStatus === currentStatus) return
-
     setUpdatingItemId(itemId)
     try {
-      // Gọi đến API của OrderItem để xử lý riêng lẻ món đó
       await orderItemAPI.updateStatus(itemId, nextStatus)
       applyItemStatusUpdate(itemId, nextStatus)
       message.success('Đã cập nhật trạng thái món ăn!')
     } catch (error) {
       message.error('Lỗi khi cập nhật trạng thái món!')
-      console.error(error)
     } finally {
       setUpdatingItemId(null)
     }
   }
 
-  // --- GIỮ NGUYÊN COLUMNS ---
   const columns = [
     {
       title: 'Bàn số',
@@ -152,33 +155,22 @@ const OrderManagementContent = () => {
       title: 'Món ăn',
       dataIndex: 'dishName',
       key: 'menu_item',
-      render: (_, record) => {
-        const dishLabel = record?.dishName || 'Món không xác định'
-        const quantity = Number(record?.quantity) || 0
-        const price = Number(record?.price) || 0
-
-        return (
-          <div className="flex items-center gap-3 min-w-55">
-            {record?.dishImage ? (
-              <img
-                src={record.dishImage}
-                alt={dishLabel}
-                className="h-12 w-12 rounded-lg object-cover border border-slate-200"
-              />
-            ) : (
-              <div className="h-12 w-12 rounded-lg bg-slate-100 border border-slate-200" />
-            )}
-
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-slate-900 truncate">{dishLabel}</span>
-                <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-md">x{quantity}</span>
-              </div>
-              <div className="text-orange-600 italic font-semibold">{price.toLocaleString()} đ</div>
+      render: (_, record) => (
+        <div className="flex items-center gap-3 min-w-55">
+          {record?.dishImage ? (
+            <img src={record.dishImage} alt={record.dishName} className="h-12 w-12 rounded-lg object-cover border border-slate-200" />
+          ) : (
+            <div className="h-12 w-12 rounded-lg bg-slate-100 border border-slate-200" />
+          )}
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-slate-900 truncate">{record.dishName}</span>
+              <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-md">x{record.quantity}</span>
             </div>
+            <div className="text-orange-600 italic font-semibold">{record.price.toLocaleString()} đ</div>
           </div>
-        )
-      },
+        </div>
+      ),
     },
     {
       title: 'Trạng thái',
@@ -242,7 +234,6 @@ const OrderManagementContent = () => {
     },
   ]
 
-  // --- UI GIỮ NGUYÊN ---
   return (
     <>
       <section className="flex justify-between items-end mb-2">
@@ -259,19 +250,42 @@ const OrderManagementContent = () => {
         <section className="flex justify-start items-stretch gap-4 flex-wrap py-4">
           <TableOrderManager />
         </section>
-        <section className="gap-2 flex items-center mb-4">
-          {STATUS_TAGS.map((t) => (
-            <Tag variant="solid" key={t.key} color={t.color} icon={t.icon}>
-              {t.label}: {t.count}
-            </Tag>
-          ))}
+
+        {/* --- UI TAGS: Đã thêm sự kiện Click để Filter --- */}
+        <section className="gap-2 flex items-center mb-4 flex-wrap">
+          <Tag
+            color={!filterStatus ? "blue" : "default"}
+            className="cursor-pointer py-1 px-3 rounded-md border-none"
+            style={{ fontSize: '14px', fontWeight: !filterStatus ? 'bold' : 'normal' }}
+            onClick={() => setFilterStatus(null)}
+          >
+            Tất cả: {flattenOrdersToItemRows(orders, itemStatusById).length}
+          </Tag>
+
+          {STATUS_TAGS.map((t) => {
+            const isActive = filterStatus === t.key;
+            return (
+              <Tag
+                key={t.key}
+                color={isActive ? t.color : "default"}
+                icon={t.icon}
+                variant={isActive ? "solid" : "outline"}
+                className={`cursor-pointer py-1 px-3 rounded-md transition-all ${isActive ? 'scale-105 shadow-sm' : 'opacity-70'}`}
+                style={{ fontSize: '14px' }}
+                onClick={() => setFilterStatus(isActive ? null : t.key)}
+              >
+                {t.label}: {t.count}
+              </Tag>
+            )
+          })}
         </section>
+
         <Table
           columns={columns}
           dataSource={dataSource}
           loading={loading}
           pagination={{ pageSize: 8 }}
-          className="rounded-xl"
+          className="rounded-xl border border-slate-100"
         />
       </Card>
 
@@ -287,14 +301,12 @@ const OrderManagementContent = () => {
   )
 }
 
-const OrderManagement = () => {
-  return (
-    <App>
-      <OrderStatusProvider>
-        <OrderManagementContent />
-      </OrderStatusProvider>
-    </App>
-  )
-}
+const OrderManagement = () => (
+  <App>
+    <OrderStatusProvider>
+      <OrderManagementContent />
+    </OrderStatusProvider>
+  </App>
+)
 
 export default OrderManagement
