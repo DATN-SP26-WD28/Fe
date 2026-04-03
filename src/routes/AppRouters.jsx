@@ -28,6 +28,7 @@ import {
 import MenuInterface from '@/pages/Client/MenuInterface'
 import Login from '@/pages/Client/Login'
 import Register from '@/pages/Client/Register'
+import PaymentResult from '@/pages/guest/PaymentResult'
 
 const AppRoutes = () => {
   return (
@@ -61,6 +62,8 @@ const AppRoutes = () => {
           <Route path="payment" element={<PaymentPage />} />
           <Route path="call-staff" element={<CallStaffPage />} />
         </Route>
+        <Route path="/payment-result" element={<PaymentResult />} />
+
         {/* Admin: Quản trị viên */}
         <Route element={<ProtectedRoute allowedRoles={ADMIN_ALLOWED_ROLES} />}>
           <Route path="/admin" element={<AdminLayout />}>
