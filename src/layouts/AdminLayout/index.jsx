@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Outlet } from 'react-router'
 import { Layout } from 'antd'
+import { getAuthSession } from '@/shared/utils/authSession'
 const { Content } = Layout
 // components
 import Sidebar from './components/Sidebar'
@@ -9,7 +10,7 @@ import FooterAdmin from './components/FooterAdmin'
 
 const AdminLayout = () => {
   const [collapsed, setCollapsed] = useState(false)
-  const role = 'admin' // Data test quyền
+  const { role } = getAuthSession()
 
   return (
     <Layout className="h-screen">
