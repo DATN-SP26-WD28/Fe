@@ -1,9 +1,8 @@
-import { AlarmClockCheck, CheckCheck, ClipboardCheck, CookingPot, Users, DollarSign } from 'lucide-react'
+import { AlarmClockCheck, CheckCheck, ClipboardCheck, CookingPot, Users, DollarSign, MoveHorizontal } from 'lucide-react'
 import React, { useEffect, useMemo, useState } from 'react'
-import { Empty, Modal, Spin, Tag, Button, Divider, message, Popconfirm } from 'antd'
+import { Empty, Modal, Spin, Tag, Button, Divider, message, Popconfirm, Select } from 'antd'
 import { fetchTables } from '@/configs/table.api'
 import orderAPI from '@/configs/order.api'
-// KIỂM TRA: Đảm bảo tên file và đường dẫn này đúng trong project của Khanh
 import paymentAPI from '@/configs/payment.api'
 import { useOrderStatus } from '@/contexts/OrderStatusContext'
 import {
@@ -14,7 +13,6 @@ import {
   normalizeOrderStatus,
 } from '@/shared/constants/app.constants'
 
-// Các hàm Helper giữ nguyên như cũ của Khanh
 const getTableIdFromOrder = (order) => {
   const tableRef = order?.table_id
   if (!tableRef) return null
@@ -25,14 +23,7 @@ const getTableIdFromOrder = (order) => {
 const aggregateItemStats = (orders = [], itemStatusById = {}) => {
   return orders.reduce(
     (acc, order) => {
-      const orderStatus = normalizeOrderStatus(order?.status)
       const items = Array.isArray(order?.items) ? order.items : []
-      if (!items.length) {
-        if (orderStatus === ORDER_ITEM_STATUS.pending) acc.pending += 1
-        else if (ORDER_PREPARING_STATUSES.includes(orderStatus)) acc.preparing += 1
-        else if (ORDER_SERVED_STATUSES.includes(orderStatus)) acc.served += 1
-        return acc
-      }
       items.forEach((item) => {
         const itemQty = Number(item?.quantity) || 0
         const itemStatus = normalizeOrderStatus(itemStatusById[item?._id] || item?.status)
@@ -46,8 +37,8 @@ const aggregateItemStats = (orders = [], itemStatusById = {}) => {
   )
 }
 
-const TableOrderManager = () => {
-  const { orders, itemStatusById } = useOrderStatus()
+const TableOrderManager = ({ refreshData }) => {
+  const { orders, itemStatusById, refreshOrders } = useOrderStatus() // Thêm refreshOrders từ context
   const [tables, setTables] = useState([])
   const [tableItemStats, setTableItemStats] = useState({})
   const [open, setOpen] = useState(false)
@@ -55,26 +46,32 @@ const TableOrderManager = () => {
   const [modalOrders, setModalOrders] = useState([])
   const [modalLoading, setModalLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [isSwitchModalOpen, setIsSwitchModalOpen] = useState(false)
+  const [targetTableId, setTargetTableId] = useState(null)
 
-  // Tính tổng hóa đơn cả bàn
+  // LOGIC TÍNH TỔNG TIỀN QUAN TRỌNG: Chỉ tính các món 'served' (Đã phục vụ)
   const totalBill = useMemo(() => {
-    return modalOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0)
-  }, [modalOrders])
+    return modalOrders.reduce((sum, order) => {
+      const payableAmount = (order.items || []).reduce((acc, item) => {
+        const status = normalizeOrderStatus(itemStatusById[item?._id] || item?.status);
+        if (status === 'served' || status === 'Đã phục vụ') {
+          return acc + (item.price * item.quantity);
+        }
+        return acc;
+      }, 0);
+      return sum + payableAmount;
+    }, 0);
+  }, [modalOrders, itemStatusById]);
 
   const loadTables = async () => {
     try {
       const res = await fetchTables()
       setTables(Array.isArray(res) ? res : [])
-    } catch (error) {
-      console.error("Lỗi load bàn:", error)
-    }
+    } catch (error) { console.error(error) }
   }
 
-  useEffect(() => {
-    loadTables()
-  }, [])
+  useEffect(() => { loadTables() }, [])
 
-  // useEffect loadTableItemStats giữ nguyên của Khanh...
   useEffect(() => {
     if (!tables.length) { setTableItemStats({}); return; }
     let mounted = true
@@ -88,7 +85,7 @@ const TableOrderManager = () => {
           }),
         )
         if (mounted) setTableItemStats(Object.fromEntries(results))
-      } catch (error) { console.error(error); if (mounted) setTableItemStats({}) }
+      } catch (error) { if (mounted) setTableItemStats({}) }
     }
     loadTableItemStats()
     return () => { mounted = false }
@@ -112,15 +109,11 @@ const TableOrderManager = () => {
     try {
       const res = await orderAPI.getByTable(table._id)
       setModalOrders(Array.isArray(res?.data) ? res.data : [])
-    } catch (error) {
-      setModalOrders([])
-    } finally {
-      setModalLoading(false)
-    }
+    } catch (error) { setModalOrders([]) } finally { setModalLoading(false) }
   }
 
-  // LOGIC THANH TOÁN QUAN TRỌNG
   const handleCounterPayment = async () => {
+    if (totalBill === 0) return message.warning("Không có món nào đã phục vụ để thanh toán!");
     setSubmitting(true)
     try {
       await paymentAPI.processCounter({
@@ -129,17 +122,26 @@ const TableOrderManager = () => {
         amount_paid: totalBill,
         note: "Thanh toán tại quầy"
       })
-
       message.success(`Thanh toán bàn ${selectedTable.table_number} thành công!`)
       setOpen(false)
       loadTables()
-      orderAPI.getAll()
-    } catch (error) {
-      console.error("LỖI THANH TOÁN:", error)
-      message.error(error.response?.data?.message || "Không thể thực hiện thanh toán")
-    } finally {
-      setSubmitting(false)
-    }
+      if (refreshData) refreshData()
+      if (refreshOrders) refreshOrders()
+    } catch (error) { message.error("Không thể thực hiện thanh toán") } finally { setSubmitting(false) }
+  }
+
+  const handleSwitchTable = async () => {
+    if (!targetTableId) return message.warning("Vui lòng chọn bàn muốn chuyển đến!")
+    setSubmitting(true)
+    try {
+      await orderAPI.switchTable({ oldTableId: selectedTable._id, newTableId: targetTableId })
+      message.success(`Đã chuyển bàn thành công!`)
+      setIsSwitchModalOpen(false)
+      setOpen(false)
+      loadTables()
+      if (refreshData) refreshData()
+      if (refreshOrders) refreshOrders()
+    } catch (error) { message.error("Lỗi khi chuyển bàn") } finally { setSubmitting(false) }
   }
 
   return (
@@ -147,35 +149,25 @@ const TableOrderManager = () => {
       <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'>
         {tables.map((table) => {
           const tableOrders = ordersByTable[String(table._id)] || []
-          const isOccupied = tableOrders.length > 0
+          const isOccupied = tableOrders.some(order => order.items?.length > 0)
           const stats = tableItemStats[String(table._id)] || { pending: 0, preparing: 0, served: 0 }
-
           return (
-            <div
-              key={table._id}
-              className={`text-sm flex items-stretch gap-2 border p-2 rounded-md min-w-24 min-h-24 cursor-pointer transition-all ${isOccupied ? 'border-orange-400 bg-orange-50 shadow-sm' : 'border-gray-300 hover:border-blue-400'}`}
-              role='button'
-              onClick={() => openTableModal(table)}
-            >
+            <div key={table._id} role='button' onClick={() => openTableModal(table)}
+              className={`text-sm flex items-stretch gap-2 border p-2 rounded-md min-w-24 min-h-24 cursor-pointer transition-all ${isOccupied ? 'border-orange-400 bg-orange-50 shadow-sm' : 'border-gray-300 hover:border-blue-400'}`}>
               <section className='flex flex-col items-center justify-center gap-2 min-w-[50px]'>
                 <div className='font-bold text-center text-lg'>{table.table_number}</div>
-                <div className='flex items-center gap-1 text-gray-500'>
-                  <Users size={14} />
-                  <span>{table.capacity || 0}</span>
-                </div>
+                <div className='flex items-center gap-1 text-gray-500'><Users size={14} /><span>{table.capacity || 0}</span></div>
               </section>
               <div className='shrink-0 w-px grow h-auto bg-gray-200'></div>
-
               {!isOccupied ? (
                 <section className='flex flex-col items-center justify-center gap-1 grow text-gray-400'>
-                  <ClipboardCheck size={20} />
-                  <span className='text-[10px] uppercase font-bold tracking-tighter'>Trống</span>
+                  <ClipboardCheck size={20} /><span className='text-[10px] uppercase font-bold'>Trống</span>
                 </section>
               ) : (
                 <section className='flex flex-col justify-center gap-1 grow'>
-                  <div className='flex items-center text-orange-600'><AlarmClockCheck size={14} /><span className='ml-2 font-bold'>{stats.pending}</span></div>
-                  <div className='flex items-center text-blue-600'><CookingPot size={14} /><span className='ml-2 font-bold'>{stats.preparing}</span></div>
-                  <div className='flex items-center text-green-600'><CheckCheck size={14} /><span className='ml-2 font-bold'>{stats.served}</span></div>
+                  <div className='flex items-center text-orange-600'><AlarmClockCheck size={14} /><span className='ml-2 font-bold text-xs'>{stats.pending}</span></div>
+                  <div className='flex items-center text-blue-600'><CookingPot size={14} /><span className='ml-2 font-bold text-xs'>{stats.preparing}</span></div>
+                  <div className='flex items-center text-green-600'><CheckCheck size={14} /><span className='ml-2 font-bold text-xs'>{stats.served}</span></div>
                 </section>
               )}
             </div>
@@ -183,64 +175,87 @@ const TableOrderManager = () => {
         })}
       </div>
 
-      <Modal
-        open={open}
-        title={selectedTable ? `Chi tiết đơn hàng - Bàn ${selectedTable.table_number}` : 'Chi tiết đơn hàng'}
-        width={700}
-        onCancel={() => { setOpen(false); setSelectedTable(null); setModalOrders([]); }}
+      <Modal open={open} width={700} onCancel={() => setOpen(false)}
+        title={selectedTable ? `Chi tiết đơn hàng - Bàn ${selectedTable.table_number}` : 'Chi tiết'}
         footer={[
           <Button key="close" onClick={() => setOpen(false)}>Đóng</Button>,
           modalOrders.length > 0 && (
-            <Popconfirm
-              key="pay"
-              title="Xác nhận khách đã trả tiền mặt?"
-              onConfirm={handleCounterPayment}
-              okText="Xác nhận"
-              cancelText="Hủy"
-              okButtonProps={{ loading: submitting, className: 'bg-orange-500' }}
-            >
-              <Button type="primary" danger icon={<DollarSign size={16} />} className="bg-orange-600 border-none font-bold ml-2">
-                Thanh toán tại quầy
-              </Button>
+            <Button key="switch" icon={<MoveHorizontal size={16} />} onClick={() => setIsSwitchModalOpen(true)} className="border-blue-500 text-blue-500">
+              Chuyển bàn
+            </Button>
+          ),
+          modalOrders.length > 0 && (
+            <Popconfirm key="pay" title={`Thanh toán ${totalBill.toLocaleString()}đ cho món đã phục vụ?`} onConfirm={handleCounterPayment}>
+              <Button type="primary" danger icon={<DollarSign size={16} />} className="bg-orange-600">Thanh toán</Button>
             </Popconfirm>
           )
         ]}
       >
-        {modalLoading ? <div className='py-8 flex justify-center'><Spin /></div> : modalOrders.length === 0 ? <Empty description='Chưa có đơn hàng' /> : (
-          <>
-            <div className='flex flex-col gap-3 max-h-[50vh] overflow-y-auto pr-1'>
-              {modalOrders.map((order) => {
-                const codeTail = String(order?._id || '').slice(-6).toUpperCase()
-                const statusConfig = ORDER_ITEM_STATUS_MAP[normalizeOrderStatus(order?.status)] || { color: 'default', label: order?.status }
-                return (
-                  <div key={order._id} className='border border-gray-100 rounded-lg p-3 bg-white'>
-                    <div className='flex items-center justify-between mb-2'>
-                      <div className='font-bold text-xs text-gray-400'>ĐƠN #{codeTail}</div>
-                      <Tag color={statusConfig.color} className='text-[10px]'>{statusConfig.label}</Tag>
-                    </div>
-                    <div className='space-y-2 mb-3'>
-                      {(order?.items || []).map((item) => (
-                        <div key={item._id} className='text-sm flex justify-between'>
-                          <span><b>{item?.dish_id?.dish_name}</b> <Tag color='volcano' className='ml-1'>x{item.quantity}</Tag></span>
-                          <span className='font-medium'>{(item.price * item.quantity).toLocaleString()}đ</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className='flex justify-between border-t border-dashed pt-2'>
-                      <span className='text-gray-400 text-xs uppercase font-bold'>Tạm tính:</span>
-                      <span className='text-orange-500 font-bold'>{(order.total_amount || 0).toLocaleString()}đ</span>
-                    </div>
+        {modalLoading ? <div className='py-8 flex justify-center'><Spin /></div> : modalOrders.length === 0 ? <Empty description='Bàn trống' /> : (
+          <div className='flex flex-col gap-4 max-h-[50vh] overflow-y-auto pr-1'>
+            {modalOrders.map((order) => {
+              const codeTail = String(order?._id || '').slice(-6).toUpperCase();
+              const payableItems = (order.items || []).filter(i => normalizeOrderStatus(itemStatusById[i._id] || i.status) === 'served' || i.status === 'Đã phục vụ');
+              const otherItems = (order.items || []).filter(i => !payableItems.includes(i));
+
+              return (
+                <div key={order._id} className='border border-gray-200 rounded-xl p-4 bg-white shadow-sm'>
+                  <div className='flex items-center justify-between mb-3'>
+                    <Tag color="blue" className="rounded-full px-3 font-bold">ĐƠN #{codeTail}</Tag>
+                    <span className="text-[10px] text-gray-400 font-mono">{new Date(order.createdAt).toLocaleTimeString('vi-VN')}</span>
                   </div>
-                )
-              })}
-            </div>
-            <Divider className="my-4" />
-            <div className="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100">
-              <span className="text-gray-400 font-black uppercase text-xs tracking-widest">Tổng hóa đơn cả bàn:</span>
+                  <div className='space-y-3'>
+                    {payableItems.map((item) => (
+                      <div key={item._id} className='flex justify-between items-center'>
+                        <div className="flex flex-col">
+                          <span className='font-bold text-gray-700'>{item?.dish_id?.dish_name}</span>
+                          <Tag color="green" className="w-fit text-[10px] mt-1">Đã phục vụ</Tag>
+                        </div>
+                        <div className="text-right">
+                          <div className='text-xs text-gray-400'>x{item.quantity}</div>
+                          <div className='font-black text-orange-500'>{(item.price * item.quantity).toLocaleString()}đ</div>
+                        </div>
+                      </div>
+                    ))}
+                    {otherItems.map((item) => {
+                      const status = normalizeOrderStatus(itemStatusById[item._id] || item.status);
+                      const isCancelled = status === 'cancelled' || status === 'Đã hủy';
+                      return (
+                        <div key={item._id} className='flex justify-between items-center opacity-50 bg-gray-50 p-2 rounded-lg border border-dashed'>
+                          <div className="flex flex-col">
+                            <span className={`text-xs ${isCancelled ? 'line-through text-red-400' : 'text-gray-500'}`}>{item?.dish_id?.dish_name}</span>
+                            <span className={`text-[9px] font-bold uppercase ${isCancelled ? 'text-red-500' : 'text-blue-400'}`}>
+                              {isCancelled ? 'Đã hủy (0đ)' : 'Đã huỷ'}
+                            </span>
+                          </div>
+                          <span className='font-bold text-gray-400 text-xs'>0đ</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className='flex justify-between border-t border-gray-100 mt-4 pt-3'>
+                    <span className='text-gray-400 text-[10px] uppercase font-black tracking-tighter'>Cộng món đã nhận:</span>
+                    <span className='text-gray-800 font-black'>{payableItems.reduce((s, i) => s + (i.price * i.quantity), 0).toLocaleString()}đ</span>
+                  </div>
+                </div>
+              )
+            })}
+            <Divider className="my-2" />
+            <div className="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-orange-100">
+              <span className="text-gray-500 font-black text-xs uppercase tracking-widest">Tổng cộng cả bàn:</span>
               <span className="text-2xl font-black text-orange-600 italic">{totalBill.toLocaleString()}đ</span>
             </div>
-          </>
+          </div>
         )}
+      </Modal>
+
+      <Modal title={<b>Chuyển từ bàn {selectedTable?.table_number} sang bàn...</b>} open={isSwitchModalOpen} onOk={handleSwitchTable} onCancel={() => setIsSwitchModalOpen(false)} confirmLoading={submitting} okText="Xác nhận chuyển" destroyOnClose>
+        <div className="py-4">
+          <p className="text-gray-500 mb-2 italic">Chỉ hiển thị các bàn đang trống hoàn toàn:</p>
+          <Select placeholder="Chọn bàn mới" className="w-full" size="large" onChange={(val) => setTargetTableId(val)}
+            options={tables.filter(t => t._id !== selectedTable?._id).filter(t => !(ordersByTable[String(t._id)]?.some(o => o.items?.length > 0))).map(t => ({ label: `Bàn số ${t.table_number} (Sức chứa: ${t.capacity})`, value: t._id }))}
+          />
+        </div>
       </Modal>
     </>
   )

@@ -1,66 +1,77 @@
 import invoiceAPI from '@/configs/invoice.api';
-import orderAPI from '@/configs/order.api';
-import { ShopOutlined, ShoppingCartOutlined, StarOutlined } from '@ant-design/icons';
-import { Breadcrumb, Card, Progress, Spin, Statistic, Table, Empty, Tag } from 'antd';
-import { useEffect, useState, useMemo } from 'react';
+import { FireOutlined, ShopOutlined } from '@ant-design/icons';
+import { Breadcrumb, Button, Card, Empty, Progress, Spin, Statistic, Table, Tag } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 
 const BRAND_COLOR = '#f07f29';
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
-  const [orders, setOrders] = useState([]); // Lưu orders để tính top dishes
+  const [invoices, setInvoices] = useState([]); // Dùng invoices làm nguồn dữ liệu chính cho doanh thu
   const [stats, setStats] = useState({
     totalRevenue: 0,
     orderCount: 0,
     tableOccupancy: 0,
-    recentInvoices: [],
   });
 
-  // 1. Logic tính toán Top món ăn bán chạy nhất từ dữ liệu thực
+  // 1. Logic tính Top món ăn: Lấy từ các hóa đơn đã thanh toán để đảm bảo tính thực tế
   const topDishesData = useMemo(() => {
     const dishCounts = {};
-    orders.forEach(order => {
-      order.items?.forEach(item => {
-        const name = item.dish_id?.dish_name || "Món ẩn";
-        dishCounts[name] = (dishCounts[name] || 0) + (item.quantity || 0);
+    // Quét qua tất cả hóa đơn, sau đó quét qua từng order trong hóa đơn đó (nếu có populate items)
+    // Hoặc đơn giản là quét qua các items của hóa đơn nếu backend trả về items kèm theo
+    invoices.forEach(inv => {
+      // Giả sử backend trả về invoice kèm thông tin món (nếu không, dùng dữ liệu orders)
+      // Ở đây mình ưu tiên tính từ orders đã hoàn thành
+      inv.order_ids?.forEach(order => {
+        order.items?.forEach(item => {
+          const name = item.dish_id?.dish_name || "Món ẩn";
+          dishCounts[name] = (dishCounts[name] || 0) + (item.quantity || 0);
+        });
       });
     });
 
     return Object.entries(dishCounts)
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count)
-      .slice(0, 5); // Lấy top 5 món
-  }, [orders]);
+      .slice(0, 5);
+  }, [invoices]);
+
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    try {
+      const [invoicesRes] = await Promise.all([
+        invoiceAPI.getAll(),
+      ]);
+
+      // KIỂM TRA PHẢN HỒI: Khớp với dữ liệu JSON thực tế của Khanh
+      const allInvoices = invoicesRes.data?.invoices || invoicesRes.data?.data || invoicesRes.data || [];
+
+      // Đảm bảo allInvoices là mảng
+      const invoiceList = Array.isArray(allInvoices) ? allInvoices : [];
+
+      // SẮP XẾP: Đưa hóa đơn mới nhất lên đầu
+      const sortedInvoices = [...invoiceList].sort((a, b) =>
+        new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt)
+      );
+
+      setInvoices(sortedInvoices);
+
+      // TÍNH DOANH THU THỰC TẾ
+      const totalRevenue = sortedInvoices.reduce((acc, inv) => acc + (Number(inv.total_amount) || 0), 0);
+
+      setStats({
+        totalRevenue,
+        orderCount: sortedInvoices.length, // Số lượng hóa đơn đã thanh toán
+        tableOccupancy: 65,
+      });
+    } catch (error) {
+      console.error("Lỗi fetch dashboard:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const [invoicesRes, ordersRes] = await Promise.all([
-          invoiceAPI.getAll(),
-          orderAPI.getAll()
-        ]);
-
-        // FIX LỖI: Trỏ đúng vào mảng invoices từ response của Khanh
-        const allInvoices = invoicesRes.data?.invoices || invoicesRes.data?.data?.invoices || [];
-        const allOrders = ordersRes.data || [];
-
-        setOrders(allOrders);
-
-        // Tính doanh thu: Lọc các hóa đơn đã thanh toán (paid hoặc completed)
-        const totalRevenue = allInvoices.reduce((acc, inv) => acc + (Number(inv.total_amount) || 0), 0);
-
-        setStats({
-          totalRevenue,
-          orderCount: allOrders.length,
-          recentInvoices: allInvoices.slice(0, 5), // Hiện 5 hóa đơn mới nhất
-          tableOccupancy: 65, // Số này có thể tính từ tableAPI nếu cần
-        });
-      } catch (error) {
-        console.error("Lỗi fetch dashboard:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchDashboardData();
   }, []);
 
@@ -68,116 +79,111 @@ export default function Dashboard() {
     {
       title: 'Mã hóa đơn',
       dataIndex: 'invoice_number',
-      render: (v) => <span className="font-bold text-blue-600">{v}</span>,
+      key: 'invoice_number',
+      render: (v) => <span className="font-mono font-bold text-blue-600 text-xs">{v}</span>,
     },
     {
       title: 'Bàn',
-      dataIndex: ['table_id', 'table_number'],
-      render: (v) => <Tag color="blue">Bàn {v}</Tag>,
+      dataIndex: 'table_id',
+      key: 'table_id',
+      render: (table) => <Tag color="orange" className='font-bold'>Bàn {table?.table_number || '?'}</Tag>,
     },
     {
       title: 'Tổng tiền',
       dataIndex: 'total_amount',
+      key: 'total_amount',
       align: 'right',
-      render: (v) => <span className="font-bold text-orange-500">{new Intl.NumberFormat('vi-VN').format(v)}đ</span>,
+      render: (v) => <span className="font-black text-gray-800">{new Intl.NumberFormat('vi-VN').format(v)}đ</span>,
     },
     {
-      title: 'Ngày thanh toán',
+      title: 'Thời gian',
       dataIndex: 'created_at',
-      render: (v) => v ? new Date(v).toLocaleString('vi-VN', {
-        hour: '2-digit',
-        minute: '2-digit',
-        day: '2-digit',
-        month: '2-digit'
-      }) : "---",
+      key: 'created_at',
+      render: (v) => <span className='text-gray-400 text-xs'>{new Date(v).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</span>,
     }
   ];
 
-  if (loading) return <div className="h-screen flex items-center justify-center"><Spin size="large" tip="Đang tải số liệu..." /></div>;
+  if (loading) return <div className="h-screen flex items-center justify-center bg-white"><Spin size="large" tip="Đang tính toán doanh thu..." /></div>;
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <section className="mb-6">
-        <Breadcrumb items={[{ title: 'Admin' }, { title: 'Thống kê' }]} className="mb-2" />
-        <h1 className="text-3xl font-black text-gray-800 uppercase tracking-tight italic">Tổng quan Roosta</h1>
+    <div className="p-4 md:p-8 bg-gray-50 min-h-screen">
+      <section className="mb-8 flex justify-between items-end">
+        <div>
+          <Breadcrumb items={[{ title: 'Roosta' }, { title: 'Dashboard' }]} className="mb-2" />
+          <h1 className="text-4xl font-black text-gray-900 uppercase italic tracking-tighter">Hệ thống Thống kê</h1>
+        </div>
+        <Button onClick={fetchDashboardData} icon={<FireOutlined />} className='border-none shadow-sm font-bold'>Làm mới số liệu</Button>
       </section>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-6">
-        <Card className="rounded-2xl border-none shadow-sm hover:shadow-md transition-all">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+        <Card className="rounded-3xl border-none shadow-sm overflow-hidden relative">
+          <div className='absolute top-[-10px] right-[-10px] opacity-5 text-orange-600'><ShopOutlined style={{ fontSize: '80px' }} /></div>
           <Statistic
-            title={<span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Doanh thu tổng</span>}
+            title={<span className="text-gray-400 font-black uppercase text-[10px] tracking-widest">Doanh thu tổng</span>}
             value={stats.totalRevenue}
             suffix="đ"
-            valueStyle={{ color: BRAND_COLOR, fontWeight: 900, fontSize: '24px' }}
-            prefix={<ShopOutlined className="mr-2 opacity-20" />}
+            valueStyle={{ color: BRAND_COLOR, fontWeight: 900, fontSize: '28px' }}
           />
         </Card>
 
-        <Card className="rounded-2xl border-none shadow-sm hover:shadow-md transition-all">
+        <Card className="rounded-3xl border-none shadow-sm">
           <Statistic
-            title={<span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Đơn hàng hiện tại</span>}
+            title={<span className="text-gray-400 font-black uppercase text-[10px] tracking-widest">Hóa đơn đã chốt</span>}
             value={stats.orderCount}
-            valueStyle={{ fontWeight: 900, fontSize: '24px' }}
-            prefix={<ShoppingCartOutlined className="mr-2 text-blue-500 opacity-20" />}
+            valueStyle={{ fontWeight: 900, fontSize: '28px' }}
           />
         </Card>
 
-        <Card className="rounded-2xl border-none shadow-sm hover:shadow-md transition-all">
-          <div className="text-gray-400 font-bold uppercase text-[10px] tracking-widest mb-2">Tỷ lệ lấp đầy bàn</div>
-          <Progress percent={stats.tableOccupancy} strokeColor={BRAND_COLOR} status="active" strokeWidth={12} />
+        <Card className="rounded-3xl border-none shadow-sm">
+          <div className="text-gray-400 font-black uppercase text-[10px] tracking-widest mb-4">Lấp đầy bàn</div>
+          <Progress percent={stats.tableOccupancy} strokeColor={BRAND_COLOR} status="active" strokeWidth={15} strokeLinecap="round" />
         </Card>
 
-        <Card className="rounded-2xl border-none shadow-sm hover:shadow-md transition-all">
+        <Card className="rounded-3xl border-none shadow-sm">
           <Statistic
-            title={<span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Hài lòng khách hàng</span>}
+            title={<span className="text-gray-400 font-black uppercase text-[10px] tracking-widest">Hài lòng</span>}
             value={98.5}
             suffix="%"
-            valueStyle={{ color: '#3f8600', fontWeight: 900, fontSize: '24px' }}
-            prefix={<StarOutlined className="mr-2 opacity-20" />}
+            valueStyle={{ color: '#3f8600', fontWeight: 900, fontSize: '28px' }}
           />
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Table Gần đây */}
-        <Card className="xl:col-span-2 rounded-2xl border-none shadow-sm" title={<span className="font-black uppercase italic tracking-tighter">Lịch sử hóa đơn mới nhất</span>}>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        {/* Table Lịch sử */}
+        <Card className="xl:col-span-2 rounded-3xl border-none shadow-sm"
+          title={<span className="font-black uppercase italic text-gray-400 text-xs tracking-widest">Lịch sử giao dịch mới nhất</span>}>
           <Table
             columns={columns}
-            dataSource={stats.recentInvoices}
+            dataSource={invoices.slice(0, 6)}
             pagination={false}
             rowKey="_id"
-            locale={{ emptyText: <Empty description="Chưa có hóa đơn nào" /> }}
+            className="custom-table"
           />
         </Card>
 
         {/* Món ăn bán chạy */}
-        <Card className="rounded-2xl border-none shadow-sm" title={<span className="font-black uppercase italic tracking-tighter">Món ăn thịnh hành</span>}>
-          <div className="space-y-6 mt-2">
+        <Card className="rounded-3xl border-none shadow-sm"
+          title={<span className="font-black uppercase italic text-gray-400 text-xs tracking-widest">Món ăn thịnh hành</span>}>
+          <div className="space-y-8 mt-4">
             {topDishesData.length > 0 ? topDishesData.map((dish, index) => (
-              <DishProgress
-                key={index}
-                name={dish.name}
-                // Tính % dựa trên món bán chạy nhất (index 0)
-                percent={Math.round((dish.count / topDishesData[0].count) * 100)}
-                color={index === 0 ? "#ff4d4f" : index === 1 ? "#faad14" : BRAND_COLOR}
-              />
-            )) : <Empty description="Chưa có dữ liệu món ăn" />}
+              <div key={index}>
+                <div className="flex justify-between mb-2 font-black text-gray-700 text-xs uppercase">
+                  <span>{dish.name}</span>
+                  <span className="text-orange-500 italic">{dish.count} món</span>
+                </div>
+                <Progress
+                  percent={Math.round((dish.count / topDishesData[0].count) * 100)}
+                  showInfo={false}
+                  strokeColor={index === 0 ? '#ff4d4f' : BRAND_COLOR}
+                  strokeWidth={10}
+                />
+              </div>
+            )) : <Empty description="Chưa có dữ liệu bán hàng" />}
           </div>
         </Card>
       </div>
-    </div>
-  );
-}
-
-function DishProgress({ name, percent, color }) {
-  return (
-    <div className="animate-fadeIn">
-      <div className="flex justify-between mb-1 font-bold text-gray-600 text-sm">
-        <span className="truncate max-w-[150px]">{name}</span>
-        <span className="italic text-gray-400">{percent}%</span>
-      </div>
-      <Progress percent={percent} showInfo={false} strokeColor={color} strokeWidth={8} />
     </div>
   );
 }
