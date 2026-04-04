@@ -36,7 +36,11 @@ const orderAPI = {
     // 6. Admin: Hủy hoặc xóa đơn hàng (khi khách thanh toán xong hoặc hủy món)
     delete: (id) => {
         return axiosClient.delete(`${PREFIX}/${id}`);
-    }
+    },
+    switchTable: (data) => {
+        const url = "/orders/switch-table";
+        return axiosClient.post(url, data);
+    },
 };
 
 export default orderAPI;
