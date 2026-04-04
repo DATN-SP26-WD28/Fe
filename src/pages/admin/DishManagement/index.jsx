@@ -8,6 +8,7 @@ import { truncateText } from '@/shared/utils/truncateText'
 import { formatCurrency } from '@/shared/utils/currency'
 import { CATEGORY_PLACEHOLDER_IMG } from '@/assets/images'
 import DishForm from './DishForm'
+import { STATUS_COLOR, STATUS_LABEL } from '@/shared/constants/status'
 
 const DishManagement = () => {
   const queryClient = useQueryClient()
@@ -112,11 +113,9 @@ const DishManagement = () => {
     dataIndex: 'status',
     key: 'status',
     render: (status) => {
-      const map = {
-        available: 'green',
-        unavailable: 'red',
-      }
-      return <Tag color={map[status] || 'default'}>{status}</Tag>
+      const color = STATUS_COLOR[status] || 'default'
+      const label = STATUS_LABEL[status] || status
+      return <Tag color={color}>{label}</Tag>
     },
   },
   {
