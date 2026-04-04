@@ -1,11 +1,11 @@
 export const STATUS_COLOR = {
   available: 'green',
-  unavailable: 'red',
+  out_of_stock: 'red',
 }
 
 export const STATUS_LABEL = {
   available: 'Còn hàng',
-  unavailable: 'Hết hàng',
+  out_of_stock: 'Hết hàng',
 }
 
 export default {
