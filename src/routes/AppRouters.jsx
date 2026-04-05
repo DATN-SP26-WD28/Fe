@@ -65,7 +65,7 @@ const AppRoutes = () => {
         <Route path="/payment-result" element={<PaymentResult />} />
 
         {/* Admin: Quản trị viên */}
-        <Route element={<ProtectedRoute allowedRoles={ADMIN_ALLOWED_ROLES} />}>
+        {/* <Route element={<ProtectedRoute allowedRoles={ADMIN_ALLOWED_ROLES} />}> */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Dashboard />} />
             <Route path="categories" element={<CategoryManagement />} />
@@ -77,7 +77,7 @@ const AppRoutes = () => {
             <Route path="staffs" element={<StaffManagement />} />
             <Route path="users" element={<UserManagement />} />
           </Route>
-        </Route>
+        {/* </Route> */}
         {/* Global Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
         <Route
