@@ -106,54 +106,59 @@ export default function Dashboard() {
   if (loading) return <div className="h-screen flex items-center justify-center bg-white"><Spin size="large" tip="Đang tính toán doanh thu..." /></div>;
 
   return (
-    <div className="p-4 md:p-8 bg-gray-50 min-h-screen">
-      <section className="mb-8 flex justify-between items-end">
-        <div>
-          <Breadcrumb items={[{ title: 'Roosta' }, { title: 'Dashboard' }]} className="mb-2" />
-          <h1 className="text-4xl font-black text-gray-900 uppercase italic tracking-tighter">Hệ thống Thống kê</h1>
+    <div className="min-h-screen font-sans">
+      <section className="mb-3">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h1 className="font-bold text-3xl mb-2">Hệ thống thống kê</h1>
+            <Breadcrumb items={[{ title: 'Trang chủ' }, { title: 'Thống kê' }]} />
+          </div>
+          <Button type="primary" className="rounded-xl flex items-center gap-2" icon={<FireOutlined />} onClick={fetchDashboardData}>
+            Làm mới số liệu
+          </Button>
         </div>
-        <Button onClick={fetchDashboardData} icon={<FireOutlined />} className='border-none shadow-sm font-bold'>Làm mới số liệu</Button>
       </section>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-        <Card className="rounded-3xl border-none shadow-sm overflow-hidden relative">
-          <div className='absolute top-[-10px] right-[-10px] opacity-5 text-orange-600'><ShopOutlined style={{ fontSize: '80px' }} /></div>
-          <Statistic
-            title={<span className="text-gray-400 font-black uppercase text-[10px] tracking-widest">Doanh thu tổng</span>}
-            value={stats.totalRevenue}
-            suffix="đ"
-            valueStyle={{ color: BRAND_COLOR, fontWeight: 900, fontSize: '28px' }}
-          />
-        </Card>
+      <Card className="shadow-sm rounded-2xl mb-8" title="Tổng quan">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+          <Card className="rounded-2xl border-none shadow-sm overflow-hidden relative">
+            <div className='absolute top-[-10px] right-[-10px] opacity-5 text-orange-600'><ShopOutlined style={{ fontSize: '80px' }} /></div>
+            <Statistic
+              title={<span className="text-sm text-slate-500">Doanh thu tổng</span>}
+              value={stats.totalRevenue}
+              suffix="đ"
+              valueStyle={{ color: BRAND_COLOR, fontWeight: 700, fontSize: '24px' }}
+            />
+          </Card>
 
-        <Card className="rounded-3xl border-none shadow-sm">
-          <Statistic
-            title={<span className="text-gray-400 font-black uppercase text-[10px] tracking-widest">Hóa đơn đã chốt</span>}
-            value={stats.orderCount}
-            valueStyle={{ fontWeight: 900, fontSize: '28px' }}
-          />
-        </Card>
+          <Card className="rounded-2xl border-none shadow-sm">
+            <Statistic
+              title={<span className="text-sm text-slate-500">Hóa đơn đã chốt</span>}
+              value={stats.orderCount}
+              valueStyle={{ fontWeight: 700, fontSize: '24px' }}
+            />
+          </Card>
 
-        <Card className="rounded-3xl border-none shadow-sm">
-          <div className="text-gray-400 font-black uppercase text-[10px] tracking-widest mb-4">Lấp đầy bàn</div>
-          <Progress percent={stats.tableOccupancy} strokeColor={BRAND_COLOR} status="active" strokeWidth={15} strokeLinecap="round" />
-        </Card>
+          <Card className="rounded-2xl border-none shadow-sm">
+            <div className="text-sm text-slate-500 mb-4">Lấp đầy bàn</div>
+            <Progress percent={stats.tableOccupancy} strokeColor={BRAND_COLOR} status="active" strokeWidth={15} strokeLinecap="round" />
+          </Card>
 
-        <Card className="rounded-3xl border-none shadow-sm">
-          <Statistic
-            title={<span className="text-gray-400 font-black uppercase text-[10px] tracking-widest">Hài lòng</span>}
-            value={98.5}
-            suffix="%"
-            valueStyle={{ color: '#3f8600', fontWeight: 900, fontSize: '28px' }}
-          />
-        </Card>
-      </div>
+          <Card className="rounded-2xl border-none shadow-sm">
+            <Statistic
+              title={<span className="text-sm text-slate-500">Hài lòng</span>}
+              value={98.5}
+              suffix="%"
+              valueStyle={{ color: '#3f8600', fontWeight: 700, fontSize: '24px' }}
+            />
+          </Card>
+        </div>
+      </Card>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         {/* Table Lịch sử */}
-        <Card className="xl:col-span-2 rounded-3xl border-none shadow-sm"
-          title={<span className="font-black uppercase italic text-gray-400 text-xs tracking-widest">Lịch sử giao dịch mới nhất</span>}>
+        <Card className="xl:col-span-2 rounded-2xl border-none shadow-sm"
+          title="Lịch sử giao dịch mới nhất">
           <Table
             columns={columns}
             dataSource={invoices.slice(0, 6)}
@@ -164,14 +169,14 @@ export default function Dashboard() {
         </Card>
 
         {/* Món ăn bán chạy */}
-        <Card className="rounded-3xl border-none shadow-sm"
-          title={<span className="font-black uppercase italic text-gray-400 text-xs tracking-widest">Món ăn thịnh hành</span>}>
-          <div className="space-y-8 mt-4">
+        <Card className="rounded-2xl border-none shadow-sm"
+          title="Món ăn thịnh hành">
+          <div className="space-y-6 mt-4">
             {topDishesData.length > 0 ? topDishesData.map((dish, index) => (
-              <div key={index}>
-                <div className="flex justify-between mb-2 font-black text-gray-700 text-xs uppercase">
+              <div key={index} className="rounded-2xl border border-slate-200 p-4">
+                <div className="flex justify-between mb-2 text-sm font-semibold text-slate-800">
                   <span>{dish.name}</span>
-                  <span className="text-orange-500 italic">{dish.count} món</span>
+                  <span className="text-orange-500">{dish.count} món</span>
                 </div>
                 <Progress
                   percent={Math.round((dish.count / topDishesData[0].count) * 100)}
