@@ -17,11 +17,17 @@ const MenuInterface = () => {
     queryFn: () => categoryAPI.getAll(),
   });
 
-  const activeCategory = categories[activeTab];
+  // Add "All" category at the beginning
+  const categoriesWithAll = [
+    { _id: 'all', name: 'All' },
+    ...categories,
+  ];
+
+  const activeCategory = categoriesWithAll[activeTab];
 
   const { data: dishes = [], isLoading: isDishesLoading } = useQuery({
     queryKey: ['dishes', activeCategory?._id || 'all'],
-    queryFn: () => dishAPI.getAll(activeCategory ? { category_id: activeCategory._id } : null),
+    queryFn: () => dishAPI.getAll(activeCategory?._id === 'all' ? null : { category_id: activeCategory?._id }),
   });
 
   const handleAddItem = (dish) => {
@@ -38,27 +44,27 @@ const MenuInterface = () => {
   return (
     <div className="pb-24"> {/* Thêm padding bottom để không bị thanh Bar che */}
       {/* ── Mobile Tab Bar ── */}
-      <nav className="md:hidden sticky top-0 z-20 flex overflow-x-auto bg-white/80 backdrop-blur-md border-b">
-        {categories.map((item, index) => (
+      <nav className="md:hidden sticky top-0 z-20 flex overflow-x-auto bg-white shadow-sm border-b border-gray-200">
+        {categoriesWithAll.map((item, index) => (
           <button
             key={item._id}
             ref={(el) => (mobilTabRefs.current[index] = el)}
             onClick={() => setActiveTab(index)}
-            className={`px-5 py-4 text-xs whitespace-nowrap transition-all border-b-2 ${activeTab === index ? 'text-[#f07f29] border-[#f07f29] font-bold' : 'text-gray-400 border-transparent'}`}
+            className={`px-6 py-3.5 text-sm whitespace-nowrap transition-all border-b-3 font-medium ${activeTab === index ? 'text-[#f07f29] border-[#f07f29]' : 'text-gray-500 border-transparent hover:text-gray-700'}`}
           >
-            {item.name.toUpperCase()}
+            {item.name}
           </button>
         ))}
       </nav>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 md:px-8">
+      <div className="max-w-7xl mx-auto px-4 py-8 md:px-8">
         {/* ── Desktop Category Pills ── */}
-        <div className="hidden md:flex gap-3 overflow-x-auto mb-8">
-          {categories.map((item, index) => (
+        <div className="hidden md:flex flex-wrap gap-3 mb-10 pb-6 border-b border-gray-200">
+          {categoriesWithAll.map((item, index) => (
             <button
               key={item._id}
               onClick={() => setActiveTab(index)}
-              className={`px-6 py-2 rounded-full text-sm font-semibold transition-all shadow-sm ${activeTab === index ? 'bg-[#f07f29] text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+              className={`px-7 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === index ? 'bg-[#f07f29] text-white shadow-lg shadow-orange-200 hover:shadow-xl hover:shadow-orange-200 hover:scale-105' : 'bg-white text-gray-600 border border-gray-200 hover:border-[#f07f29] hover:text-[#f07f29] hover:shadow-md'}`}
             >
               {item.name}
             </button>
@@ -66,10 +72,16 @@ const MenuInterface = () => {
         </div>
 
         {/* Heading */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="h-8 w-1.5 bg-[#f07f29] rounded-full"></div>
-          <h2 className="font-extrabold text-2xl text-gray-800">{categories[activeTab]?.name}</h2>
-          <span className="bg-orange-100 text-[#f07f29] px-2 py-0.5 rounded text-xs font-bold">{dishes.length}</span>
+        <div className="flex items-center gap-4 mb-8">
+          <div className="flex-1">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-1 bg-gradient-to-b from-[#f07f29] to-orange-400 rounded-full"></div>
+              <div>
+                <h2 className="font-black text-3xl md:text-4xl text-gray-900">{categoriesWithAll[activeTab]?.name}</h2>
+              </div>
+            </div>
+          </div>
+          <span className="bg-gradient-to-r from-orange-100 to-orange-50 text-[#f07f29] px-4 py-2 rounded-full text-sm font-bold border border-orange-200">{dishes.length} items</span>
         </div>
 
         {/* Dish Grid */}
