@@ -26,8 +26,18 @@ const MenuInterface = () => {
   const activeCategory = categoriesWithAll[activeTab];
 
   const { data: dishes = [], isLoading: isDishesLoading } = useQuery({
-    queryKey: ['dishes', activeCategory?._id || 'all'],
-    queryFn: () => dishAPI.getAll(activeCategory?._id === 'all' ? null : { category_id: activeCategory?._id }),
+    queryKey: ['dishes', activeTab],
+    queryFn: async () => {
+      if (activeTab === 0) {
+        // All items
+        return dishAPI.getAll();
+      }
+      if (activeTab > 0 && categories[activeTab - 1]) {
+        // Specific category
+        return dishAPI.getAll({ category_id: categories[activeTab - 1]._id });
+      }
+      return [];
+    },
   });
 
   const handleAddItem = (dish) => {
