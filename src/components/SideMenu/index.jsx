@@ -1,5 +1,5 @@
 import React from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import {
   CloseOutlined,
   HomeOutlined,
@@ -9,12 +9,11 @@ import {
 } from '@ant-design/icons'
 
 const SideMenu = ({ isOpen, onClose }) => {
-  const navigate = useNavigate()
   const { tableId } = useParams()
 
   const menuItems = [
-    { key: 'home', label: 'Trang chủ', icon: HomeOutlined, to: `/table-order/${tableId}/menu` },
-    { key: 'menu', label: 'Thực Đơn', icon: AppstoreOutlined, to: `/table-order/${tableId}/menu` },
+    { key: 'home', label: 'Trang chủ', icon: HomeOutlined, to: '/' },
+    { key: 'menu', label: 'Thực Đơn', icon: AppstoreOutlined, to: '/menu' },
     {
       key: 'orders',
       label: 'Đơn hàng',
@@ -81,12 +80,7 @@ const SideMenu = ({ isOpen, onClose }) => {
               <button
                 type="button"
                 onClick={() => {
-                  localStorage.removeItem('token')
-                  localStorage.removeItem('refreshToken')
-                  localStorage.removeItem('guestInfo')
                   onClose()
-                  const returnPath = tableId ? `/table/${tableId}` : '/'
-                  navigate(returnPath)
                 }}
                 className="flex w-full items-center gap-3 rounded-3xl border border-red-100 bg-red-50 px-4 py-3 text-left text-red-600 transition hover:bg-red-100"
               >
