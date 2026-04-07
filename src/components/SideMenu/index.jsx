@@ -12,8 +12,8 @@ const SideMenu = ({ isOpen, onClose }) => {
   const { tableId } = useParams()
 
   const menuItems = [
-    { key: 'home', label: 'Trang chủ', icon: HomeOutlined, to: '/' },
-    { key: 'menu', label: 'Thực Đơn', icon: AppstoreOutlined, to: '/menu' },
+    { key: 'home', label: 'Trang chủ', icon: HomeOutlined, to: `/table-order/${tableId}/menu` },
+    { key: 'menu', label: 'Thực Đơn', icon: AppstoreOutlined, to: `/table-order/${tableId}/menu` },
     {
       key: 'orders',
       label: 'Đơn hàng',
