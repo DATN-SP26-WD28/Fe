@@ -15,15 +15,45 @@ const OrdersPage = () => {
   const [isPayModalOpen, setIsPayModalOpen] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState('vnpay')
   const [processPaymentLoading, setProcessPaymentLoading] = useState(false)
-  const [expandedOrderId, setExpandedOrderId] = useState(null)
+
+  const flattenedItems = useMemo(() => {
+    return orders.flatMap(order => 
+      (order.items || []).map(item => ({
+        ...item,
+        orderId: order._id,
+        orderStatus: order.status,
+        createdAt: order.createdAt
+      }))
+    )
+  }, [orders])
+
+  const groupedItems = useMemo(() => {
+    const grouped = {}
+    flattenedItems.forEach(item => {
+      const dishId = item.dish_id?._id
+      if (!dishId) return
+      
+      if (!grouped[dishId]) {
+        grouped[dishId] = {
+          ...item,
+          quantity: 0
+        }
+      }
+      grouped[dishId].quantity += item.quantity
+    })
+    return Object.values(grouped)
+  }, [flattenedItems])
+
+  const totalItems = useMemo(() => {
+    return groupedItems.reduce((sum, item) => sum + item.quantity, 0)
+  }, [groupedItems])
 
   const grandTotal = useMemo(() => {
-    return orders.reduce((sum, order) => sum + (order.total_amount || 0), 0)
-  }, [orders])
-
-  const completedCount = useMemo(() => {
-    return orders.filter(o => o.status === 'completed').length
-  }, [orders])
+    return groupedItems.reduce((sum, item) => {
+      const itemPrice = item.price || item.dish_id?.dish_price || 0
+      return sum + (itemPrice * item.quantity)
+    }, 0)
+  }, [groupedItems])
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -76,44 +106,6 @@ const OrdersPage = () => {
     }
   }
 
-  const getStatusConfig = (status) => {
-    const configs = {
-      pending: {
-        label: 'Bếp đã nhận',
-        icon: <ClockCircleOutlined />,
-        bgColor: 'bg-blue-50',
-        borderColor: 'border-blue-200',
-        textColor: 'text-blue-700',
-        dotColor: 'bg-blue-400'
-      },
-      confirmed: {
-        label: 'Đang nấu',
-        icon: <ClockCircleOutlined />,
-        bgColor: 'bg-amber-50',
-        borderColor: 'border-amber-200',
-        textColor: 'text-amber-700',
-        dotColor: 'bg-amber-400'
-      },
-      completed: {
-        label: 'Hoàn thành',
-        icon: <CheckCircleOutlined />,
-        bgColor: 'bg-green-50',
-        borderColor: 'border-green-200',
-        textColor: 'text-green-700',
-        dotColor: 'bg-green-400'
-      },
-      cancelled: {
-        label: 'Đã hủy',
-        icon: null,
-        bgColor: 'bg-red-50',
-        borderColor: 'border-red-200',
-        textColor: 'text-red-700',
-        dotColor: 'bg-red-400'
-      }
-    }
-    return configs[status] || configs.pending
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
@@ -123,20 +115,20 @@ const OrdersPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-900">
+    <div className="min-h-screen bg-white text-slate-900">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-lg border-b border-slate-200/50">
+      <div className="sticky top-0 z-40 bg-white border-b border-slate-200">
         <div className="mx-auto max-w-6xl px-4">
           <div className="flex items-center justify-between py-4">
             <button
               onClick={() => navigate(-1)}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 hover:scale-105 transition-all duration-200"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all"
             >
               <ArrowLeftOutlined className="text-lg" />
             </button>
             <div className="text-center">
-              <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Bàn {tableId}</p>
-              <h1 className="mt-1 text-xl font-bold text-slate-900">Danh sách đơn hàng</h1>
+              <p className="text-sm font-semibold text-slate-600">Bàn {tableId}</p>
+              <p className="text-xs text-slate-500">Mã đơn: #{orders[0]?._id?.slice(-6).toUpperCase() || 'N/A'}</p>
             </div>
             <div className="h-10 w-10" />
           </div>
@@ -144,33 +136,9 @@ const OrdersPage = () => {
       </div>
 
       {/* Main Content */}
-      <div className="mx-auto max-w-6xl px-4 py-8 pb-32">
-        {/* Header Card */}
-        <div className="mb-8 rounded-2xl bg-white p-6 shadow-sm border border-slate-200/50 sm:flex sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900">Tổng quan</h2>
-            <div className="mt-4 grid grid-cols-2 gap-4 sm:flex sm:gap-6">
-              <div>
-                <p className="text-sm font-medium text-slate-500">Số đơn</p>
-                <p className="mt-1 text-2xl font-bold text-slate-900">{orders.length}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-500">Hoàn thành</p>
-                <p className="mt-1 text-2xl font-bold text-green-600">{completedCount}</p>
-              </div>
-            </div>
-          </div>
-          <button
-            onClick={() => navigate(`/table-order/${tableId}/menu`)}
-            className="mt-6 sm:mt-0 w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-6 py-3 text-sm font-semibold text-white shadow-md hover:bg-orange-600 hover:shadow-lg hover:scale-105 transition-all duration-200"
-          >
-            <PlusOutlined /> Gọi thêm
-          </button>
-        </div>
-
-        {/* Orders List */}
-        {orders.length === 0 ? (
-          <div className="rounded-2xl bg-white p-12 shadow-sm border border-slate-200/50 text-center">
+      <div className="mx-auto max-w-6xl px-4 py-6 pb-40">
+        {flattenedItems.length === 0 ? (
+          <div className="rounded-2xl bg-white p-12 shadow-sm border border-slate-200 text-center">
             <Empty
               description={
                 <div>
@@ -182,120 +150,105 @@ const OrdersPage = () => {
             />
             <button
               onClick={() => navigate(`/table-order/${tableId}/menu`)}
-              className="mt-8 inline-flex rounded-xl bg-orange-500 px-6 py-3 text-sm font-semibold text-white shadow-md hover:bg-orange-600 transition-all duration-200"
+              className="mt-8 inline-flex rounded-xl bg-orange-500 px-6 py-3 text-sm font-semibold text-white shadow-md hover:bg-orange-600 transition-all"
             >
               <PlusOutlined className="mr-2" /> Gọi thêm món
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
-            {orders.map((order) => {
-              const total = order.total_amount || 0
-              const orderTime = new Date(order.createdAt).toLocaleTimeString('vi-VN', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-              })
-              const itemSummary = order.items?.map((it) => `${it.quantity}x ${it.dish_id?.dish_name || 'Món ăn'}`).join(', ')
-              const statusConfig = getStatusConfig(order.status)
-              const isExpanded = expandedOrderId === order._id
-
-              return (
-                <div key={order._id} className="space-y-0">
-                  <div 
-                    onClick={() => setExpandedOrderId(isExpanded ? null : order._id)}
-                    className="group cursor-pointer rounded-2xl bg-white p-5 border border-slate-200/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
-                  >
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-                            #{order._id.slice(-6).toUpperCase()}
-                          </p>
-                          <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-semibold ${statusConfig.bgColor} ${statusConfig.borderColor} ${statusConfig.textColor} border`}>
-                            <span className={`h-2 w-2 rounded-full ${statusConfig.dotColor}`} />
-                            {statusConfig.label}
+          <>
+            {/* Items Section */}
+            <div className="mb-6 rounded-2xl bg-white p-6 shadow-sm border border-slate-200">
+              <h3 className="font-bold text-slate-900 text-sm mb-4 uppercase tracking-widest">Chi tiết món ăn</h3>
+              <div className="text-xs text-slate-500 mb-4">{totalItems} món</div>
+              <div className="space-y-4">
+                {groupedItems.map((item, idx) => {
+                  const itemPrice = item.price || item.dish_id?.dish_price || 0
+                  const itemTotal = itemPrice * item.quantity
+                  const dishImage = item.dish_id?.image_url || 'https://via.placeholder.com/80?text=Món+ăn'
+                  return (
+                    <div key={idx} className="flex items-start gap-4 pb-4 border-b border-slate-100 last:border-b-0">
+                      {/* Image */}
+                      <div className="flex-shrink-0">
+                        <img 
+                          src={dishImage} 
+                          alt={item.dish_id?.dish_name || 'Món ăn'}
+                          className="h-24 w-24 rounded-lg object-cover border border-slate-200"
+                        />
+                      </div>
+                      
+                      {/* Content */}
+                      <div className="flex-1 min-w-0 flex flex-col justify-between">
+                        <div>
+                          <p className="font-semibold text-slate-900 text-sm">{item.dish_id?.dish_name || 'Món ăn'}</p>
+                          {item.dish_id?.description && (
+                            <p className="mt-1 text-xs text-slate-400 line-clamp-2">{item.dish_id.description}</p>
+                          )}
+                        </div>
+                        <div className="mt-2 flex items-center gap-3">
+                          <span className="inline-block bg-orange-100 text-orange-700 text-xs font-semibold px-3 py-1 rounded-full">
+                            {item.quantity}x
                           </span>
-                        </div>
-                        <h3 className="mt-3 text-lg font-bold text-slate-900">{order.items?.length || 0} {order.items?.length === 1 ? 'món' : 'món'}</h3>
-                        <p className="mt-2 text-sm text-slate-600 line-clamp-2">{itemSummary || 'Chưa có sản phẩm'}</p>
-                      </div>
-                      <div className="flex items-center gap-4 sm:flex-col sm:items-end">
-                        <div className="rounded-xl bg-orange-50 px-4 py-3 text-right border border-orange-100">
-                          <p className="text-xs font-medium uppercase tracking-widest text-orange-600">Tổng</p>
-                          <p className="mt-1 text-xl font-black text-orange-600">{formatCurrency(total)}</p>
+                          <span className="text-sm font-bold text-orange-600">{formatCurrency(itemPrice)}</span>
                         </div>
                       </div>
+                      
+                      {/* Total */}
+                      <div className="text-right flex-shrink-0">
+                        <p className="font-black text-orange-600 text-base">{formatCurrency(itemTotal)}</p>
+                        <p className="text-xs text-slate-400 mt-1">tổng</p>
+                      </div>
                     </div>
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4 text-xs text-slate-500">
-                      <span>🕐 {orderTime}</span>
-                      <span className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
-                    </div>
-                  </div>
+                  )
+                })}
+              </div>
+            </div>
 
-                  {/* Expanded Details */}
-                  {isExpanded && (
-                    <div className="bg-slate-50 border border-t-0 border-slate-200/50 rounded-b-2xl p-5 animate-in fade-in duration-300">
-                      <div className="space-y-3">
-                        <h4 className="font-bold text-slate-900 text-sm uppercase tracking-widest">Chi tiết đơn hàng</h4>
-                        {order.items && order.items.length > 0 ? (
-                          <div className="space-y-2">
-                            {order.items.map((item, idx) => {
-                              const itemPrice = item.dish_id?.dish_price || 0
-                              const itemTotal = itemPrice * item.quantity
-                              return (
-                                <div key={idx} className="flex items-start justify-between gap-3 rounded-lg bg-white p-3 border border-slate-100">
-                                  <div className="flex-1 min-w-0">
-                                    <p className="font-semibold text-slate-900 text-sm">{item.dish_id?.dish_name || 'Món ăn'}</p>
-                                    <p className="mt-1 text-xs text-slate-500">
-                                      {item.quantity}x {formatCurrency(itemPrice)}
-                                    </p>
-                                    {item.dish_id?.description && (
-                                      <p className="mt-1 text-xs text-slate-400 line-clamp-1">{item.dish_id.description}</p>
-                                    )}
-                                  </div>
-                                  <div className="text-right min-w-max">
-                                    <p className="font-bold text-orange-600 text-sm">{formatCurrency(itemTotal)}</p>
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-slate-500">Không có sản phẩm</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
+            {/* Payment Summary */}
+            <div className="rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100/50 p-6 shadow-sm border border-orange-200">
+              <h3 className="font-bold text-slate-900 text-sm mb-4 uppercase tracking-widest">Tổng tất thanh toán</h3>
+              <div className="space-y-2 mb-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600">Tạm tính</span>
+                  <span className="text-sm font-semibold text-slate-900">{formatCurrency(grandTotal * 0.95)}</span>
                 </div>
-              )
-            })}
-          </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600">Phí dịch vụ (5%)</span>
+                  <span className="text-sm font-semibold text-slate-900">{formatCurrency(grandTotal * 0.05)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600">VAT (8%)</span>
+                  <span className="text-sm font-semibold text-slate-900">{formatCurrency(grandTotal * 0.08)}</span>
+                </div>
+              </div>
+              <div className="border-t border-orange-200 pt-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-lg font-bold text-slate-900">Tổng cộng</span>
+                  <span className="text-2xl font-black text-orange-600">{formatCurrency(grandTotal)}</span>
+                </div>
+              </div>
+            </div>
+          </>
         )}
       </div>
 
       {/* Bottom Action Bar */}
-      {orders.length > 0 && (
+      {flattenedItems.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white/95 backdrop-blur-xl shadow-[0_-12px_30px_rgba(15,23,42,0.08)]">
           <div className="mx-auto max-w-6xl px-4">
-            <div className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="rounded-xl bg-gradient-to-br from-orange-50 to-orange-100/50 px-5 py-4 border border-orange-100">
-                <p className="text-xs font-semibold uppercase tracking-widest text-orange-600">Tổng cộng</p>
-                <p className="mt-1.5 text-2xl font-black text-orange-600">{formatCurrency(grandTotal)}</p>
-              </div>
-              <div className="flex gap-3 w-full sm:w-auto">
-                <button
-                  onClick={() => navigate(`/table-order/${tableId}/menu`)}
-                  className="flex-1 sm:flex-none h-12 rounded-xl bg-slate-100 px-6 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-200 hover:scale-105 transition-all duration-200"
-                >
-                  <PlusOutlined className="mr-2" /> Gọi thêm
-                </button>
-                <button
-                  onClick={() => setIsPayModalOpen(true)}
-                  className="flex-1 sm:flex-none h-12 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-6 text-sm font-bold uppercase tracking-wider text-white shadow-md hover:shadow-lg hover:from-orange-600 hover:to-orange-700 hover:scale-105 transition-all duration-200"
-                >
-                  💳 Thanh toán
-                </button>
-              </div>
+            <div className="flex gap-3 py-4">
+              <button
+                onClick={() => navigate(`/table-order/${tableId}/menu`)}
+                className="flex-1 h-12 rounded-lg bg-white border border-slate-300 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all"
+              >
+                Gọi thêm món
+              </button>
+              <button
+                onClick={() => setIsPayModalOpen(true)}
+                className="flex-1 h-12 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 text-sm font-bold text-white hover:shadow-lg hover:from-orange-600 hover:to-orange-700 transition-all"
+              >
+                💳 Thanh toán
+              </button>
             </div>
           </div>
         </div>
