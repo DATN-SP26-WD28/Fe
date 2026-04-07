@@ -8,7 +8,6 @@ const { Sider } = Layout
 export default function Sidebar({ role, collapsed: collapsedProp, onCollapse }) {
   const [internalCollapsed, setInternalCollapsed] = useState(false)
   const collapsed = typeof collapsedProp === 'boolean' ? collapsedProp : internalCollapsed
-  const Icon = BRAND.icon
 
   const handleCollapse = (v) => {
     if (onCollapse) onCollapse(v)
@@ -33,7 +32,7 @@ export default function Sidebar({ role, collapsed: collapsedProp, onCollapse }) 
           <img src="/logo-roosta.png" alt="Roosta Logo" width={36} height={36} className="object-contain" />
         </a>
         {!collapsed && (
-          <span className="text-sm font-semibold tracking-tight text-gray-800 truncate">
+          <span className="text-lg font-semibold tracking-tight text-gray-800 truncate">
             {BRAND.name}
           </span>
         )}

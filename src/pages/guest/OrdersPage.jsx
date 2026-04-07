@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Spin, message, Modal, Radio, Space } from 'antd'
-import { ArrowLeftOutlined, CreditCardOutlined, WalletOutlined } from '@ant-design/icons'
+import { Spin, message, Modal, Radio, Space, Empty } from 'antd'
+import { CreditCardOutlined, WalletOutlined, ArrowLeftOutlined, PlusOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import orderAPI from '@/configs/order.api'
 import paymentAPI from '@/configs/payment.api'
+
 const formatCurrency = (v) => new Intl.NumberFormat('vi-VN').format(v) + 'đ'
 
 const OrdersPage = () => {
@@ -11,16 +12,50 @@ const OrdersPage = () => {
   const navigate = useNavigate()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
-  const [open, setOpen] = useState({})
   const [isPayModalOpen, setIsPayModalOpen] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState('vnpay')
+  const [processPaymentLoading, setProcessPaymentLoading] = useState(false)
 
-  // 1. Tính tổng cộng tất cả các hóa đơn đang hiển thị
-  const grandTotal = useMemo(() => {
-    return orders.reduce((sum, order) => sum + (order.total_amount || 0), 0)
+  const flattenedItems = useMemo(() => {
+    return orders.flatMap(order =>
+      (order.items || []).map(item => ({
+        ...item,
+        orderId: order._id,
+        orderStatus: order.status,
+        createdAt: order.createdAt
+      }))
+    )
   }, [orders])
 
-  const fetchOrders = async () => {
+  const groupedItems = useMemo(() => {
+    const grouped = {}
+    flattenedItems.forEach(item => {
+      const dishId = item.dish_id?._id
+      if (!dishId) return
+
+      if (!grouped[dishId]) {
+        grouped[dishId] = {
+          ...item,
+          quantity: 0
+        }
+      }
+      grouped[dishId].quantity += item.quantity
+    })
+    return Object.values(grouped)
+  }, [flattenedItems])
+
+  const totalItems = useMemo(() => {
+    return groupedItems.reduce((sum, item) => sum + item.quantity, 0)
+  }, [groupedItems])
+
+  const grandTotal = useMemo(() => {
+    return groupedItems.reduce((sum, item) => {
+      const itemPrice = item.price || item.dish_id?.dish_price || 0
+      return sum + (itemPrice * item.quantity)
+    }, 0)
+  }, [groupedItems])
+
+  const fetchOrders = useCallback(async () => {
     try {
       const response = await orderAPI.getByTable(tableId)
       setOrders(response.data)
@@ -33,174 +68,253 @@ const OrdersPage = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [tableId])
 
   useEffect(() => {
     fetchOrders()
     const interval = setInterval(fetchOrders, 10000)
     return () => clearInterval(interval)
-  }, [tableId])
-
-  // 2. Hàm xử lý thanh toán
+  }, [fetchOrders])
 
   const handleProcessPayment = async () => {
     try {
+      setProcessPaymentLoading(true)
       if (paymentMethod === 'vnpay') {
         const res = await paymentAPI.createUrl({
           table_id: tableId,
           amount: grandTotal
-        });
-
-        // Kiểm tra cả hai trường hợp: res.data.paymentUrl hoặc res.paymentUrl
-        // Vì tùy vào axiosClient của bạn có tự .data hay không
-        const url = res.data?.paymentUrl || res.paymentUrl;
-
+        })
+        const url = res.data?.paymentUrl || res.paymentUrl
         if (url) {
-          message.loading("Đang kết nối đến VNPay...", 1.5);
+          message.loading("Đang kết nối đến VNPay...", 1.5)
           setTimeout(() => {
-            window.location.href = url;
-          }, 1000);
+            window.location.href = url
+          }, 1000)
         } else {
-          // Log ra để xem thực tế res đang chứa cái gì nếu vẫn lỗi
-          console.log("Cấu trúc res nhận được:", res);
-          message.error("Không nhận được link từ hệ thống (Sai cấu trúc data)");
+          console.log("Cấu trúc res nhận được:", res)
+          message.error("Không nhận được link từ hệ thống (Sai cấu trúc data)")
         }
+      } else if (paymentMethod === 'cash') {
+        message.success('Gọi nhân viên để thanh toán tiền mặt')
+        setIsPayModalOpen(false)
       }
     } catch (error) {
-      console.error("Lỗi:", error);
-      message.error("Có lỗi xảy ra khi tạo giao dịch");
-    }
-  };
-
-  const toggle = (id) => setOpen((s) => ({ ...s, [id]: !s[id] }))
-
-  const getStatusStyle = (status) => {
-    switch (status) {
-      case 'pending': return 'bg-orange-100 text-orange-600'
-      case 'confirmed': return 'bg-blue-100 text-blue-600'
-      case 'completed': return 'bg-green-100 text-green-700'
-      case 'cancelled': return 'bg-red-100 text-red-600'
-      default: return 'bg-gray-100 text-gray-600'
+      console.error("Lỗi:", error)
+      message.error("Có lỗi xảy ra khi tạo giao dịch")
+    } finally {
+      setProcessPaymentLoading(false)
     }
   }
 
-  const getStatusText = (status) => {
-    const map = { pending: 'Bếp đã nhận', confirmed: 'Đang nấu', completed: 'Hoàn thành', cancelled: 'Đã hủy' }
-    return map[status] || status
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+        <Spin size="large" />
+      </div>
+    )
   }
-
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><Spin size="large" /></div>
 
   return (
-    <div className="p-4 max-w-[980px] mx-auto pb-40">
+    <div className="min-h-screen bg-white text-slate-900">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-full"><ArrowLeftOutlined className="text-xl" /></button>
-        <h1 className="text-2xl font-black uppercase text-gray-800">Món đã gọi</h1>
+      <div className="sticky top-0 z-40 bg-white border-b border-slate-200">
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="flex items-center justify-between py-4">
+            <button
+              onClick={() => navigate(-1)}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all"
+            >
+              <ArrowLeftOutlined className="text-lg" />
+            </button>
+            <div className="text-center">
+              <p className="text-sm font-semibold text-slate-600">Bàn {tableId}</p>
+              <p className="text-xs text-slate-500">Mã đơn: #{orders[0]?._id?.slice(-6).toUpperCase() || 'N/A'}</p>
+            </div>
+            <div className="h-10 w-10" />
+          </div>
+        </div>
       </div>
 
-      {/* Danh sách Order */}
-      <div className="space-y-4">
-        {orders.map((order) => {
-          const total = order.total_amount || 0
-          const timeFormatted = new Date(order.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-          return (
-            <div key={order._id} className="border border-gray-100 rounded-2xl p-4 bg-white shadow-sm transition-all">
-              <div className="flex items-center justify-between gap-4">
-                <div onClick={() => toggle(order._id)} className="flex-1 cursor-pointer">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">ID: {order._id.slice(-6).toUpperCase()}</p>
-                    <span className="text-gray-300">•</span>
-                    <p className="text-xs text-gray-500 font-medium">{timeFormatted}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-base font-black text-gray-800">{order.items?.length || 0} món</span>
-                    <span className="text-gray-300">•</span>
-                    <span className="text-base font-black text-orange-500 italic">{formatCurrency(total)}</span>
-                  </div>
+      {/* Main Content */}
+      <div className="mx-auto max-w-6xl px-4 py-6 pb-40">
+        {flattenedItems.length === 0 ? (
+          <div className="rounded-2xl bg-white p-12 shadow-sm border border-slate-200 text-center">
+            <Empty
+              description={
+                <div>
+                  <p className="mt-4 text-base font-semibold text-slate-900">Chưa có đơn hàng nào</p>
+                  <p className="mt-2 text-sm text-slate-500">Thêm món ngay để bắt đầu gọi đồ ăn</p>
                 </div>
-                <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase ${getStatusStyle(order.status)}`}>
-                  {getStatusText(order.status)}
-                </span>
-              </div>
-
-              {open[order._id] && (
-                <div className="mt-4 border-t border-dashed border-gray-100 pt-4 space-y-4">
-                  {order.items?.map((it, idx) => (
-                    <div key={idx} className="flex items-center justify-between">
-                      <div className="flex gap-3 text-sm">
-                        <span className="font-bold text-orange-600">x{it.quantity}</span>
-                        <span className="font-bold text-gray-800">{it.dish_id?.dish_name || "Món ăn"}</span>
+              }
+              style={{ marginBottom: 0 }}
+            />
+            <button
+              onClick={() => navigate(`/table-order/${tableId}/menu`)}
+              className="mt-8 inline-flex rounded-xl bg-orange-500 px-6 py-3 text-sm font-semibold text-white shadow-md hover:bg-orange-600 transition-all"
+            >
+              <PlusOutlined className="mr-2" /> Gọi thêm món
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Items Section */}
+            <div className="mb-6 rounded-2xl bg-white p-6 shadow-sm border border-slate-200">
+              <h3 className="font-bold text-slate-900 text-sm mb-4 uppercase tracking-widest">Chi tiết món ăn</h3>
+              <div className="text-xs text-slate-500 mb-4">{totalItems} món</div>
+              <div className="space-y-4">
+                {groupedItems.map((item, idx) => {
+                  const itemPrice = item.price || item.dish_id?.dish_price || 0
+                  const itemTotal = itemPrice * item.quantity
+                  const dishImage = item.dish_id?.image_url || 'https://via.placeholder.com/80?text=Món+ăn'
+                  return (
+                    <div key={idx} className="flex items-start gap-4 pb-4 border-b border-slate-100 last:border-b-0">
+                      {/* Image */}
+                      <div className="flex-shrink-0">
+                        <img
+                          src={dishImage}
+                          alt={item.dish_id?.dish_name || 'Món ăn'}
+                          className="h-24 w-24 rounded-lg object-cover border border-slate-200"
+                        />
                       </div>
-                      <div className="text-sm font-black text-gray-700">{formatCurrency(it.price * it.quantity)}</div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0 flex flex-col justify-between">
+                        <div>
+                          <p className="font-semibold text-slate-900 text-sm">{item.dish_id?.dish_name || 'Món ăn'}</p>
+                          {item.dish_id?.description && (
+                            <p className="mt-1 text-xs text-slate-400 line-clamp-2">{item.dish_id.description}</p>
+                          )}
+                        </div>
+                        <div className="mt-2 flex items-center gap-3">
+                          <span className="inline-block bg-orange-100 text-orange-700 text-xs font-semibold px-3 py-1 rounded-full">
+                            {item.quantity}x
+                          </span>
+                          <span className="text-sm font-bold text-orange-600">{formatCurrency(itemPrice)}</span>
+                        </div>
+                      </div>
+
+                      {/* Total */}
+                      <div className="text-right flex-shrink-0">
+                        <p className="font-black text-orange-600 text-base">{formatCurrency(itemTotal)}</p>
+                        <p className="text-xs text-slate-400 mt-1">tổng</p>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              )}
+                  )
+                })}
+              </div>
             </div>
-          )
-        })}
+
+            {/* Payment Summary */}
+            <div className="rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100/50 p-6 shadow-sm border border-orange-200">
+              <h3 className="font-bold text-slate-900 text-sm mb-4 uppercase tracking-widest">Tổng tất thanh toán</h3>
+              <div className="space-y-2 mb-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600">Tạm tính</span>
+                  <span className="text-sm font-semibold text-slate-900">{formatCurrency(grandTotal * 0.95)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600">Phí dịch vụ (5%)</span>
+                  <span className="text-sm font-semibold text-slate-900">{formatCurrency(grandTotal * 0.05)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600">VAT (8%)</span>
+                  <span className="text-sm font-semibold text-slate-900">{formatCurrency(grandTotal * 0.08)}</span>
+                </div>
+              </div>
+              <div className="border-t border-orange-200 pt-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-lg font-bold text-slate-900">Tổng cộng</span>
+                  <span className="text-2xl font-black text-orange-600">{formatCurrency(grandTotal)}</span>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Bottom Bar: Tổng tiền & Nút bấm */}
-      {orders.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white p-4 border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-50">
-          <div className="max-w-[980px] mx-auto">
-            <div className="flex justify-between items-center mb-4 px-2">
-              <span className="text-gray-400 font-bold uppercase text-xs tracking-widest">Tổng cộng tạm tính:</span>
-              <span className="text-2xl font-black text-orange-500 italic">{formatCurrency(grandTotal)}</span>
-            </div>
-
-            <div className="flex gap-3">
+      {/* Bottom Action Bar */}
+      {flattenedItems.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white/95 backdrop-blur-xl shadow-[0_-12px_30px_rgba(15,23,42,0.08)]">
+          <div className="mx-auto max-w-6xl px-4">
+            <div className="flex gap-3 py-4">
               <button
                 onClick={() => navigate(`/table-order/${tableId}/menu`)}
-                className="flex-1 h-14 bg-gray-100 text-gray-600 rounded-2xl font-black uppercase tracking-widest active:scale-95 transition-all"
+                className="flex-1 h-12 rounded-lg bg-white border border-slate-300 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all"
               >
-                Gọi thêm
+                Gọi thêm món
               </button>
               <button
                 onClick={() => setIsPayModalOpen(true)}
-                className="flex-[1.5] h-14 bg-orange-500 text-white rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-orange-200 active:scale-95 transition-all"
+                className="flex-1 h-12 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 text-sm font-bold text-white hover:shadow-lg hover:from-orange-600 hover:to-orange-700 transition-all"
               >
-                Thanh toán
+                💳 Thanh toán
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal Chọn phương thức thanh toán */}
+      {/* Payment Modal */}
       <Modal
-        title={<span className="font-black uppercase tracking-tight">Chọn phương thức trả tiền</span>}
+        title={
+          <div className="flex items-center gap-2">
+            <CreditCardOutlined className="text-xl text-orange-500" />
+            <span className="font-bold text-slate-900">Chọn phương thức thanh toán</span>
+          </div>
+        }
         open={isPayModalOpen}
         onCancel={() => setIsPayModalOpen(false)}
         onOk={handleProcessPayment}
-        okText="Xác nhận"
-        cancelText="Để sau"
-        okButtonProps={{ className: 'bg-orange-500 h-10 font-bold uppercase' }}
+        okText="Xác nhận thanh toán"
+        okButtonProps={{
+          className: 'bg-orange-500 hover:bg-orange-600 h-10 font-bold',
+          loading: processPaymentLoading
+        }}
+        cancelText="Bỏ qua"
+        width={480}
+        centered
       >
-        <Radio.Group onChange={(e) => setPaymentMethod(e.target.value)} value={paymentMethod} className="w-full mt-4">
-          <Space direction="vertical" className="w-full">
-            <Radio value="vnpay" className="border p-4 rounded-xl w-full flex items-center">
-              <div className="flex items-center gap-3">
-                <CreditCardOutlined className="text-blue-500 text-xl" />
-                <div>
-                  <div className="font-bold">VNPay Online</div>
-                  <div className="text-[10px] text-gray-400">Thanh toán qua ngân hàng, ví điện tử</div>
-                </div>
+        <div className="mt-6">
+          <Radio.Group
+            onChange={(e) => setPaymentMethod(e.target.value)}
+            value={paymentMethod}
+            className="w-full"
+          >
+            <Space direction="vertical" className="w-full" style={{ gap: '12px' }}>
+              <div className={`rounded-xl border-2 p-4 cursor-pointer transition-all ${paymentMethod === 'vnpay' ? 'border-orange-500 bg-orange-50' : 'border-slate-200 hover:border-slate-300'}`}>
+                <Radio value="vnpay" className="w-full">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
+                      <CreditCardOutlined className="text-xl text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-900">VNPay Online</p>
+                      <p className="text-xs text-slate-500">Ngân hàng, ví điện tử, QR Code</p>
+                    </div>
+                  </div>
+                </Radio>
               </div>
-            </Radio>
-            <Radio value="cash" className="border p-4 rounded-xl w-full flex items-center">
-              <div className="flex items-center gap-3">
-                <WalletOutlined className="text-orange-500 text-xl" />
-                <div>
-                  <div className="font-bold">Tiền mặt tại quầy</div>
-                  <div className="text-[10px] text-gray-400">Gọi nhân viên đến hỗ trợ thanh toán</div>
-                </div>
+              <div className={`rounded-xl border-2 p-4 cursor-pointer transition-all ${paymentMethod === 'cash' ? 'border-orange-500 bg-orange-50' : 'border-slate-200 hover:border-slate-300'}`}>
+                <Radio value="cash" className="w-full">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-100">
+                      <WalletOutlined className="text-xl text-green-600" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-900">Tiền mặt</p>
+                      <p className="text-xs text-slate-500">Thanh toán trực tiếp nhân viên</p>
+                    </div>
+                  </div>
+                </Radio>
               </div>
-            </Radio>
-          </Space>
-        </Radio.Group>
+            </Space>
+          </Radio.Group>
+          <div className="mt-6 rounded-xl bg-amber-50 border border-amber-200 p-4">
+            <p className="text-sm font-semibold text-amber-900">
+              💡 Tổng số tiền thanh toán: <span className="text-orange-600">{formatCurrency(grandTotal)}</span>
+            </p>
+          </div>
+        </div>
       </Modal>
     </div>
   )
