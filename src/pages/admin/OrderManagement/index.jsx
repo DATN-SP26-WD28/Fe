@@ -4,7 +4,6 @@ import orderAPI from '@/configs/order.api'
 import orderItemAPI from '@/configs/orderItem.api'
 import { OrderStatusProvider, useOrderStatus } from '@/contexts/OrderStatusContext'
 import {
-  ORDER_CANCELED_STATUSES,
   ORDER_ITEM_STATUS,
   ORDER_ITEM_STATUS_MAP,
   ORDER_ITEM_STATUS_OPTIONS,
@@ -20,11 +19,6 @@ const getTableIdFromOrder = (order) => {
   if (!tableRef) return null
   if (typeof tableRef === 'string') return tableRef
   return tableRef?._id || null
-}
-
-const getTableIdFromData = (orders = []) => {
-  const firstOrderWithTable = orders.find((order) => getTableIdFromOrder(order))
-  return firstOrderWithTable ? getTableIdFromOrder(firstOrderWithTable) : null
 }
 
 const BACKEND_BASE_URL = (import.meta.env.VITE_API_BACKEND_URL || 'http://localhost:8888').replace(/\/$/, '')
@@ -70,25 +64,11 @@ const OrderManagementContent = () => {
   const [loading, setLoading] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [updatingItemId, setUpdatingItemId] = useState(null)
-
-  // --- MỚI: State lưu trạng thái lọc ---
   const [filterStatus, setFilterStatus] = useState(null);
 
-  // DataSource được tính toán lại khi orders thay đổi HOẶC khi nhấn Filter
   const dataSource = useMemo(() => {
     const allRows = flattenOrdersToItemRows(orders, itemStatusById);
-
     if (!filterStatus) return allRows;
-
-    // Logic lọc: Nếu chọn "Đang nấu" thì lọc cả 'inProgress' và 'preparing'
-    if (filterStatus === ORDER_ITEM_STATUS.inProgress) {
-      return allRows.filter(row => [ORDER_ITEM_STATUS.inProgress, 'preparing'].includes(row.itemStatus));
-    }
-    // Nếu chọn "Đã hủy" thì lọc tất cả các trạng thái hủy
-    if (filterStatus === ORDER_ITEM_STATUS.canceled) {
-      return allRows.filter(row => ORDER_CANCELED_STATUSES.includes(row.itemStatus));
-    }
-
     return allRows.filter(row => row.itemStatus === filterStatus);
   }, [orders, itemStatusById, filterStatus])
 
@@ -112,15 +92,23 @@ const OrderManagementContent = () => {
     fetchOrders()
   }, [fetchOrders])
 
-  const countStatus = (statuses) => {
-    const targetStatuses = Array.isArray(statuses) ? statuses : [statuses]
-    // Lưu ý: Đếm trên dữ liệu GỐC (toàn bộ) chứ không đếm trên dữ liệu đã lọc
+  const countStatus = (statusKey) => {
     const allRows = flattenOrdersToItemRows(orders, itemStatusById);
-    return allRows.filter((item) => targetStatuses.includes(item.itemStatus)).length
+    return allRows.filter((item) => item.itemStatus === statusKey).length
   }
 
   const handleUpdateStatus = async (itemId, nextStatus, currentStatus) => {
     if (!itemId || nextStatus === currentStatus) return
+
+    // LOGIC CHẶN PHÍA FRONTEND ĐỂ ĐẢM BẢO AN TOÀN DỮ LIỆU
+    if (currentStatus === ORDER_ITEM_STATUS.served || currentStatus === ORDER_ITEM_STATUS.canceled) {
+      return message.error('Món ăn đã kết thúc quy trình, không thể thay đổi!');
+    }
+
+    if (currentStatus === ORDER_ITEM_STATUS.confirmed && nextStatus === ORDER_ITEM_STATUS.pending) {
+      return message.warning('Món đã xác nhận không thể quay lại trạng thái chờ!');
+    }
+
     setUpdatingItemId(itemId)
     try {
       await orderItemAPI.updateStatus(itemId, nextStatus)
@@ -177,7 +165,11 @@ const OrderManagementContent = () => {
       dataIndex: 'itemStatus',
       key: 'status',
       render: (status, record) => {
-        const normalizedStatus = normalizeOrderStatus(status)
+        const normalizedStatus = normalizeOrderStatus(status);
+
+        // LOGIC KHÓA SELECT: Nếu đã bưng ra (served) hoặc đã hủy (canceled) thì không cho sửa nữa
+        const isLocked = normalizedStatus === ORDER_ITEM_STATUS.served || normalizedStatus === ORDER_ITEM_STATUS.canceled;
+
         return (
           <Select
             value={normalizedStatus}
@@ -185,6 +177,7 @@ const OrderManagementContent = () => {
             loading={updatingItemId === record.itemId}
             onChange={(value) => handleUpdateStatus(record.itemId, value, normalizedStatus)}
             style={{ minWidth: 150 }}
+            disabled={isLocked} // KHÓA TẠI ĐÂY
           />
         )
       },
@@ -199,38 +192,31 @@ const OrderManagementContent = () => {
   const STATUS_TAGS = [
     {
       key: ORDER_ITEM_STATUS.pending,
-      color: 'default',
+      color: 'orange',
       icon: <ClockCircleOutlined />,
-      label: ORDER_ITEM_STATUS_MAP[ORDER_ITEM_STATUS.pending].label,
+      label: ORDER_ITEM_STATUS_MAP[ORDER_ITEM_STATUS.pending]?.label || 'Chờ xử lý',
       count: countStatus(ORDER_ITEM_STATUS.pending),
     },
     {
-      key: ORDER_ITEM_STATUS.inProgress,
-      color: 'warning',
+      key: ORDER_ITEM_STATUS.confirmed,
+      color: 'blue',
       icon: <SyncOutlined spin />,
-      label: ORDER_ITEM_STATUS_MAP[ORDER_ITEM_STATUS.inProgress].label,
-      count: countStatus([ORDER_ITEM_STATUS.inProgress, 'preparing']),
-    },
-    {
-      key: ORDER_ITEM_STATUS.ready,
-      color: 'processing',
-      icon: <SyncOutlined />,
-      label: ORDER_ITEM_STATUS_MAP[ORDER_ITEM_STATUS.ready].label,
-      count: countStatus(ORDER_ITEM_STATUS.ready),
+      label: ORDER_ITEM_STATUS_MAP[ORDER_ITEM_STATUS.confirmed]?.label || 'Đã xác nhận',
+      count: countStatus(ORDER_ITEM_STATUS.confirmed),
     },
     {
       key: ORDER_ITEM_STATUS.served,
-      color: 'success',
+      color: 'green',
       icon: <CheckCircleOutlined />,
-      label: ORDER_ITEM_STATUS_MAP[ORDER_ITEM_STATUS.served].label,
+      label: ORDER_ITEM_STATUS_MAP[ORDER_ITEM_STATUS.served]?.label || 'Đã phục vụ',
       count: countStatus(ORDER_ITEM_STATUS.served),
     },
     {
       key: ORDER_ITEM_STATUS.canceled,
-      color: 'error',
+      color: 'red',
       icon: <CloseCircleOutlined />,
-      label: ORDER_ITEM_STATUS_MAP[ORDER_ITEM_STATUS.canceled].label,
-      count: countStatus(ORDER_CANCELED_STATUSES),
+      label: ORDER_ITEM_STATUS_MAP[ORDER_ITEM_STATUS.canceled]?.label || 'Đã hủy',
+      count: countStatus(ORDER_ITEM_STATUS.canceled),
     },
   ]
 
@@ -251,7 +237,6 @@ const OrderManagementContent = () => {
           <TableOrderManager />
         </section>
 
-        {/* --- UI TAGS: Đã thêm sự kiện Click để Filter --- */}
         <section className="gap-2 flex items-center mb-4 flex-wrap">
           <Tag
             color={!filterStatus ? "blue" : "default"}
@@ -269,7 +254,6 @@ const OrderManagementContent = () => {
                 key={t.key}
                 color={isActive ? t.color : "default"}
                 icon={t.icon}
-                variant={isActive ? "solid" : "outline"}
                 className={`cursor-pointer py-1 px-3 rounded-md transition-all ${isActive ? 'scale-105 shadow-sm' : 'opacity-70'}`}
                 style={{ fontSize: '14px' }}
                 onClick={() => setFilterStatus(isActive ? null : t.key)}
@@ -286,6 +270,7 @@ const OrderManagementContent = () => {
           loading={loading}
           pagination={{ pageSize: 8 }}
           className="rounded-xl border border-slate-100"
+          rowClassName={(record) => record.itemStatus === ORDER_ITEM_STATUS.canceled ? 'opacity-50 grayscale' : ''}
         />
       </Card>
 
