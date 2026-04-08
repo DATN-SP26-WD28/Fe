@@ -1,6 +1,6 @@
-import { AlarmClockCheck, CheckCheck, ClipboardCheck, CookingPot, Users, DollarSign, MoveHorizontal } from 'lucide-react'
+import { AlarmClockCheck, CheckCheck, ClipboardCheck, CookingPot, Users, ArrowLeftRight, Wallet } from 'lucide-react'
 import React, { useEffect, useMemo, useState } from 'react'
-import { Empty, Modal, Spin, Tag, Button, Divider, message, Popconfirm, Select } from 'antd'
+import { Empty, Modal, Spin, Tag, Button, Divider, message, Popconfirm, Select, Table } from 'antd'
 import { fetchTables } from '@/configs/table.api'
 import orderAPI from '@/configs/order.api'
 import paymentAPI from '@/configs/payment.api'
@@ -85,7 +85,7 @@ const TableOrderManager = ({ refreshData }) => {
           }),
         )
         if (mounted) setTableItemStats(Object.fromEntries(results))
-      } catch (error) { if (mounted) setTableItemStats({}) }
+      } catch { if (mounted) setTableItemStats({}) }
     }
     loadTableItemStats()
     return () => { mounted = false }
@@ -107,9 +107,9 @@ const TableOrderManager = ({ refreshData }) => {
     setOpen(true)
     setModalLoading(true)
     try {
-      const res = await orderAPI.getByTable(table._id)
-      setModalOrders(Array.isArray(res?.data) ? res.data : [])
-    } catch (error) { setModalOrders([]) } finally { setModalLoading(false) }
+      const { data } = await orderAPI.getByTable(table._id)
+      setModalOrders(Array.isArray(data) ? data : [])
+    } catch { setModalOrders([]) } finally { setModalLoading(false) }
   }
 
   const handleCounterPayment = async () => {
@@ -143,6 +143,39 @@ const TableOrderManager = ({ refreshData }) => {
       if (refreshOrders) refreshOrders()
     } catch (error) { message.error("Lỗi khi chuyển bàn") } finally { setSubmitting(false) }
   }
+
+  const columns = [
+    {
+      title: 'Món ăn',
+      dataIndex: ['dish_id', 'dish_name'],
+      key: 'dish_name',
+    },
+    {
+      title: 'Đơn giá',
+      dataIndex: ['dish_id', 'price'],
+      key: 'dish_price',
+    },
+    {
+      title: 'SL',
+      dataIndex: 'quantity',
+      key: 'quantity',
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      key: 'status',
+      render: (text, record) => {
+        const status = normalizeOrderStatus(itemStatusById?.[record?._id] || record?.status || text)
+        const map = ORDER_ITEM_STATUS_MAP[status] || { color: 'default', label: status }
+        return <Tag color={map.color}>{map.label}</Tag>
+      }
+    },
+    {
+      title: 'Thành tiền',
+      dataIndex: 'total_amount',
+      key: 'total_amount',
+    },
+  ];
 
   return (
     <>
@@ -180,32 +213,36 @@ const TableOrderManager = ({ refreshData }) => {
         footer={[
           <Button key="close" onClick={() => setOpen(false)}>Đóng</Button>,
           modalOrders.length > 0 && (
-            <Button key="switch" icon={<MoveHorizontal size={16} />} onClick={() => setIsSwitchModalOpen(true)} className="border-blue-500 text-blue-500">
+            <Button key="switch" icon={<ArrowLeftRight size={16} />} onClick={() => setIsSwitchModalOpen(true)} className="border-blue-500 text-blue-500">
               Chuyển bàn
             </Button>
           ),
           modalOrders.length > 0 && (
             <Popconfirm key="pay" title={`Thanh toán ${totalBill.toLocaleString()}đ cho món đã phục vụ?`} onConfirm={handleCounterPayment}>
-              <Button type="primary" danger icon={<DollarSign size={16} />} className="bg-orange-600">Thanh toán</Button>
+              <Button type="primary"><Wallet size={16} /> Thanh toán</Button>
             </Popconfirm>
           )
         ]}
       >
         {modalLoading ? <div className='py-8 flex justify-center'><Spin /></div> : modalOrders.length === 0 ? <Empty description='Bàn trống' /> : (
-          <div className='flex flex-col gap-4 max-h-[50vh] overflow-y-auto pr-1'>
+          <div className='gap-4 overflow-y-auto pr-1'>
             {modalOrders.map((order) => {
-              const codeTail = String(order?._id || '').slice(-6).toUpperCase();
+              const codeTail = String(order?._id || '').toUpperCase();
               const payableItems = (order.items || []).filter(i => normalizeOrderStatus(itemStatusById[i._id] || i.status) === 'served' || i.status === 'Đã phục vụ');
-              const otherItems = (order.items || []).filter(i => !payableItems.includes(i));
+              {/* const otherItems = (order.items || []).filter(i => !payableItems.includes(i)); */}
+              const dataSource = order?.items ?? [];
 
               return (
-                <div key={order._id} className='border border-gray-200 rounded-xl p-4 bg-white shadow-sm'>
-                  <div className='flex items-center justify-between mb-3'>
-                    <Tag color="blue" className="rounded-full px-3 font-bold">ĐƠN #{codeTail}</Tag>
-                    <span className="text-[10px] text-gray-400 font-mono">{new Date(order.createdAt).toLocaleTimeString('vi-VN')}</span>
+                <div key={order._id} className='border border-gray-200 rounded-xl p-4 bg-white mb-6'>
+                  <div className='flex flex-col gap-1.5 mb-3'>
+                    <div className='text-gray-800'>Mã đơn:  <Tag color="blue" className="rounded-full px-3 font-bold">#{codeTail}</Tag></div>
+                    <div className='text-gray-800'>Tên khách hàng: <span className='font-semibold'>{order?.guest_id?.username || 'Khách vãng lai'}</span></div>
+                    <div className='text-gray-800'>Thời gian đặt: <span className='font-semibold'>{new Date(order.createdAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</span></div>
+                    <div className='text-gray-800'>Cập nhật: <span className='font-semibold'>{new Date(order.updatedAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</span></div>
+                    <div className='text-gray-800'>Tổng đơn đã phục vụ: <span className='font-bold text-orange-500'>{payableItems.reduce((s, i) => s + (i.price * i.quantity), 0).toLocaleString()}đ</span></div>
                   </div>
                   <div className='space-y-3'>
-                    {payableItems.map((item) => (
+                    {/* {payableItems.map((item) => (
                       <div key={item._id} className='flex justify-between items-center'>
                         <div className="flex flex-col">
                           <span className='font-bold text-gray-700'>{item?.dish_id?.dish_name}</span>
@@ -216,8 +253,8 @@ const TableOrderManager = ({ refreshData }) => {
                           <div className='font-black text-orange-500'>{(item.price * item.quantity).toLocaleString()}đ</div>
                         </div>
                       </div>
-                    ))}
-                    {otherItems.map((item) => {
+                    ))} */}
+                    {/* {otherItems.map((item) => {
                       const status = normalizeOrderStatus(itemStatusById[item._id] || item.status);
                       const isCancelled = status === 'cancelled' || status === 'Đã hủy';
                       return (
@@ -231,19 +268,23 @@ const TableOrderManager = ({ refreshData }) => {
                           <span className='font-bold text-gray-400 text-xs'>0đ</span>
                         </div>
                       )
-                    })}
+                    })} */}
                   </div>
-                  <div className='flex justify-between border-t border-gray-100 mt-4 pt-3'>
-                    <span className='text-gray-400 text-[10px] uppercase font-black tracking-tighter'>Cộng món đã nhận:</span>
+                  <section>
+                    <Divider>Danh sách món ăn đã gọi</Divider>
+                    <Table dataSource={dataSource} columns={columns} pagination={false} />
+                  </section>
+                  {/* <div className='flex justify-between border-t border-gray-100 mt-4 pt-3'>
+                    <span className='text-gray-400 text-[10px] uppercase font-black '>Cộng món đã nhận:</span>
                     <span className='text-gray-800 font-black'>{payableItems.reduce((s, i) => s + (i.price * i.quantity), 0).toLocaleString()}đ</span>
-                  </div>
+                  </div> */}
                 </div>
               )
             })}
             <Divider className="my-2" />
-            <div className="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-orange-100">
-              <span className="text-gray-500 font-black text-xs uppercase tracking-widest">Tổng cộng cả bàn:</span>
-              <span className="text-2xl font-black text-orange-600 italic">{totalBill.toLocaleString()}đ</span>
+            <div className="flex justify-between items-center bg-orange-50 p-4 rounded-xl border border-orange-100">
+              <span className="text-gray-500 font-black text-xs uppercase">Tổng cộng:</span>
+              <span className="text-2xl font-black text-orange-600 ">{totalBill.toLocaleString()}đ</span>
             </div>
           </div>
         )}
