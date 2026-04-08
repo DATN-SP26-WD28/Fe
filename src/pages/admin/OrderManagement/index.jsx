@@ -14,12 +14,12 @@ import { App, Breadcrumb, Button, Card, Select, Table, Tag, message } from 'antd
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 // --- CÁC HÀM HELPER GIỮ NGUYÊN ---
-const getTableIdFromOrder = (order) => {
-  const tableRef = order?.table_id
-  if (!tableRef) return null
-  if (typeof tableRef === 'string') return tableRef
-  return tableRef?._id || null
-}
+// const getTableIdFromOrder = (order) => {
+//   const tableRef = order?.table_id
+//   if (!tableRef) return null
+//   if (typeof tableRef === 'string') return tableRef
+//   return tableRef?._id || null
+// }
 
 const BACKEND_BASE_URL = (import.meta.env.VITE_API_BACKEND_URL || 'http://localhost:8888').replace(/\/$/, '')
 
@@ -114,7 +114,7 @@ const OrderManagementContent = () => {
       await orderItemAPI.updateStatus(itemId, nextStatus)
       applyItemStatusUpdate(itemId, nextStatus)
       message.success('Đã cập nhật trạng thái món ăn!')
-    } catch (error) {
+    } catch {
       message.error('Lỗi khi cập nhật trạng thái món!')
     } finally {
       setUpdatingItemId(null)
