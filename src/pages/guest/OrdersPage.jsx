@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Spin, message, Modal, Radio, Space, Empty } from 'antd'
+import { Spin, message, Modal, Radio, Space, Empty, Tag } from 'antd'
 import { CreditCardOutlined, WalletOutlined, ArrowLeftOutlined, PlusOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import orderAPI from '@/configs/order.api'
 import paymentAPI from '@/configs/payment.api'
+import { Dot } from 'lucide-react'
 
 const formatCurrency = (v) => new Intl.NumberFormat('vi-VN').format(v) + 'đ'
 
@@ -116,27 +117,29 @@ const OrdersPage = () => {
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
-      {/* Header */}
       <div className="sticky top-0 z-40 bg-white border-b border-slate-200">
         <div className="mx-auto max-w-6xl px-4">
-          <div className="flex items-center justify-between py-4">
+          <div className="flex items-center justify-start gap-5 py-4">
             <button
               onClick={() => navigate(-1)}
               className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all"
             >
               <ArrowLeftOutlined className="text-lg" />
             </button>
-            <div className="text-center">
-              <p className="text-sm font-semibold text-slate-600">Bàn {tableId}</p>
-              <p className="text-xs text-slate-500">Mã đơn: #{orders[0]?._id?.slice(-6).toUpperCase() || 'N/A'}</p>
-            </div>
-            <div className="h-10 w-10" />
+            <h1 className="text-3xl font-semibold text-slate-800">Đơn hàng của bạn</h1>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="mx-auto max-w-6xl px-4 py-6 pb-40">
+        <div className='flex items-center mb-4'>
+          <Tag color="orange" className="text-sm font-semibold">
+            <span>Bàn {tableId}</span>
+          </Tag>
+          <Dot size={16} />
+          <span className="text-xs text-slate-700">Mã đơn: #{orders[0]?._id?.slice(-6).toUpperCase() || 'N/A'}</span>
+        </div>
         {flattenedItems.length === 0 ? (
           <div className="rounded-2xl bg-white p-12 shadow-sm border border-slate-200 text-center">
             <Empty
@@ -159,8 +162,10 @@ const OrdersPage = () => {
           <>
             {/* Items Section */}
             <div className="mb-6 rounded-2xl bg-white p-6 shadow-sm border border-slate-200">
-              <h3 className="font-bold text-slate-900 text-sm mb-4 uppercase tracking-widest">Chi tiết món ăn</h3>
-              <div className="text-xs text-slate-500 mb-4">{totalItems} món</div>
+              <div className='flex justify-between items-center'>
+                <h3 className="font-bold text-slate-900 text-sm mb-4 uppercase tracking-widest">Chi tiết món ăn</h3>
+                <div className="text-xs text-orange-500 font-semibold mb-4">{totalItems} món</div>
+              </div>
               <div className="space-y-4">
                 {groupedItems.map((item, idx) => {
                   const itemPrice = item.price || item.dish_id?.dish_price || 0
@@ -181,22 +186,17 @@ const OrdersPage = () => {
                       <div className="flex-1 min-w-0 flex flex-col justify-between">
                         <div>
                           <p className="font-semibold text-slate-900 text-sm">{item.dish_id?.dish_name || 'Món ăn'}</p>
-                          {item.dish_id?.description && (
-                            <p className="mt-1 text-xs text-slate-400 line-clamp-2">{item.dish_id.description}</p>
-                          )}
+                          <span className="inline-block text-sm text-slate-600">
+                            Số lượng: {item.quantity}
+                          </span>
+                          <p className="mt-1 text-xs text-slate-400 line-clamp-2">{item.dish_id.description || 'Chưa có ghi chú'}</p>
                         </div>
                         <div className="mt-2 flex items-center gap-3">
-                          <span className="inline-block bg-orange-100 text-orange-700 text-xs font-semibold px-3 py-1 rounded-full">
-                            {item.quantity}x
-                          </span>
-                          <span className="text-sm font-bold text-orange-600">{formatCurrency(itemPrice)}</span>
+
                         </div>
                       </div>
-
-                      {/* Total */}
                       <div className="text-right flex-shrink-0">
-                        <p className="font-black text-orange-600 text-base">{formatCurrency(itemTotal)}</p>
-                        <p className="text-xs text-slate-400 mt-1">tổng</p>
+                        <p className="font-semibold text-slate-900 text-base">{formatCurrency(itemTotal)}</p>
                       </div>
                     </div>
                   )
@@ -206,22 +206,7 @@ const OrdersPage = () => {
 
             {/* Payment Summary */}
             <div className="rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100/50 p-6 shadow-sm border border-orange-200">
-              <h3 className="font-bold text-slate-900 text-sm mb-4 uppercase tracking-widest">Tổng tất thanh toán</h3>
-              <div className="space-y-2 mb-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-600">Tạm tính</span>
-                  <span className="text-sm font-semibold text-slate-900">{formatCurrency(grandTotal * 0.95)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-600">Phí dịch vụ (5%)</span>
-                  <span className="text-sm font-semibold text-slate-900">{formatCurrency(grandTotal * 0.05)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-600">VAT (8%)</span>
-                  <span className="text-sm font-semibold text-slate-900">{formatCurrency(grandTotal * 0.08)}</span>
-                </div>
-              </div>
-              <div className="border-t border-orange-200 pt-4">
+              <div className=" border-orange-200">
                 <div className="flex justify-between items-center">
                   <span className="text-lg font-bold text-slate-900">Tổng cộng</span>
                   <span className="text-2xl font-black text-orange-600">{formatCurrency(grandTotal)}</span>
@@ -245,9 +230,9 @@ const OrdersPage = () => {
               </button>
               <button
                 onClick={() => setIsPayModalOpen(true)}
-                className="flex-1 h-12 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 text-sm font-bold text-white hover:shadow-lg hover:from-orange-600 hover:to-orange-700 transition-all"
+                className="flex-1 h-12 rounded-lg bg-linear-to-r from-orange-500 to-orange-600 text-sm font-bold text-white hover:shadow-lg hover:from-orange-600 hover:to-orange-700 transition-all"
               >
-                💳 Thanh toán
+                Thanh toán
               </button>
             </div>
           </div>
@@ -270,7 +255,7 @@ const OrdersPage = () => {
           className: 'bg-orange-500 hover:bg-orange-600 h-10 font-bold',
           loading: processPaymentLoading
         }}
-        cancelText="Bỏ qua"
+        cancelText={"Hủy bỏ"}
         width={480}
         centered
       >
@@ -288,7 +273,7 @@ const OrdersPage = () => {
                       <CreditCardOutlined className="text-xl text-blue-600" />
                     </div>
                     <div>
-                      <p className="font-bold text-slate-900">VNPay Online</p>
+                      <p className="font-bold text-slate-900">VNPAY</p>
                       <p className="text-xs text-slate-500">Ngân hàng, ví điện tử, QR Code</p>
                     </div>
                   </div>
@@ -301,7 +286,7 @@ const OrdersPage = () => {
                       <WalletOutlined className="text-xl text-green-600" />
                     </div>
                     <div>
-                      <p className="font-bold text-slate-900">Tiền mặt</p>
+                      <p className="font-bold text-slate-900">Thanh toán tiền mặt</p>
                       <p className="text-xs text-slate-500">Thanh toán trực tiếp nhân viên</p>
                     </div>
                   </div>
@@ -311,7 +296,7 @@ const OrdersPage = () => {
           </Radio.Group>
           <div className="mt-6 rounded-xl bg-amber-50 border border-amber-200 p-4">
             <p className="text-sm font-semibold text-amber-900">
-              💡 Tổng số tiền thanh toán: <span className="text-orange-600">{formatCurrency(grandTotal)}</span>
+              Tổng số tiền thanh toán: <span className="text-orange-600">{formatCurrency(grandTotal)}</span>
             </p>
           </div>
         </div>

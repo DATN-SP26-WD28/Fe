@@ -58,6 +58,14 @@ export const CartProvider = ({ children }) => {
                 message.success("Đặt món thành công! Bếp đã nhận đơn.");
                 clearCart();
                 setIsModalOpen(false);
+                // Try to get current tableId from URL (/table-order/:tableId/...) or guestInfo
+                const pathMatch = window.location.pathname.match(/\/table-order\/([^\/]+)/);
+                const tableIdFromUrl = pathMatch ? pathMatch[1] : null;
+                let tableId = tableIdFromUrl;
+                if (tableId) {
+                    // Use full page navigation to ensure router (CartProvider is outside Router)
+                    window.location.href = `/table-order/${tableId}/orders`;
+                }
             }
         } catch (error) {
             message.error(error.response?.data?.message || "Lỗi đặt món!");
@@ -72,8 +80,6 @@ export const CartProvider = ({ children }) => {
     return (
         <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, totalItems, totalPrice, openCart: () => setIsModalOpen(true) }}>
             {children}
-
-            {/* GIAO DIỆN MODAL GIỎ HÀNG TÍCH HỢP */}
             <Modal
                 title={
                     <div className="flex items-center gap-2 border-b pb-3">
@@ -112,18 +118,15 @@ export const CartProvider = ({ children }) => {
                 </div>
 
                 <div className="px-4 mt-4">
-                    <Text strong className="text-gray-600 block mb-2">Ghi chú cho đầu bếp:</Text>
+                    <Text strong className="text-gray-600 block mb-2">Ghi chú</Text>
                     <Input.TextArea
                         placeholder="Ví dụ: Không cay, nhiều đá..."
                         rows={3} value={note} onChange={(e) => setNote(e.target.value)}
                         className="rounded-xl bg-gray-50 border-none focus:bg-white transition-all"
                     />
-
-                    <Divider className="my-4" />
-
-                    <div className="flex justify-between items-end mb-5">
+                    <div className="flex justify-between items-center my-5">
                         <Text className="text-gray-500 uppercase text-xs tracking-wider font-bold">Tổng thanh toán</Text>
-                        <Title level={3} className="m-0 text-[#f07f29]">{totalPrice.toLocaleString()}đ</Title>
+                        <Title level={3} className="!m-0 text-[#f07f29]">{totalPrice.toLocaleString()}đ</Title>
                     </div>
 
                     <Button

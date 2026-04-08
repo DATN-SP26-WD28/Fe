@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import { Card, Table, Tag, Breadcrumb, Button, QRCode, message, Popconfirm, Form } from 'antd'
-import { Edit, Trash2, Plus, Download, RefreshCcw } from 'lucide-react'
+import { Edit, Trash2, Plus, Download } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchTables, deleteTable, createTable, updateTable, regenerateTableToken } from '@/configs/table.api'
+import { fetchTables, deleteTable, createTable, updateTable } from '@/configs/table.api'
 import { downloadCanvasImage, composeQRCodeWithText } from '@/shared/utils/utils'
 import TableForm from './TableForm'
 
@@ -51,17 +51,6 @@ const TableManagement = () => {
     },
     onError: (err) => {
       message.error(err.response?.data?.message || 'Xóa bàn thất bại')
-    },
-  })
-
-  const regenerateTokenMutation = useMutation({
-    mutationFn: (id) => regenerateTableToken(id),
-    onSuccess: () => {
-      message.success('Làm mới mã QR thành công')
-      queryClient.invalidateQueries({ queryKey: ['tables'] })
-    },
-    onError: (err) => {
-      message.error(err.response?.data?.message || 'Làm mới thất bại')
     },
   })
 
@@ -132,7 +121,7 @@ const TableManagement = () => {
               onClick={() => downloadQRCode(record)}
               title="Tải mã QR"
             >
-              Tải xuống
+              Tải mã QR
             </Button>
           </div>
         </div>
@@ -162,10 +151,10 @@ const TableManagement = () => {
       key: 'status',
       render: (status) => {
         const map = {
-          available: { color: 'green', text: 'Sẵn sàng' },
+          available: { color: 'green', text: 'Còn trống' },
           occupied: { color: 'red', text: 'Đang sử dụng' },
           reserved: { color: 'orange', text: 'Đã đặt' },
-          out_of_service: { color: 'default', text: 'Tạm ngưng' },
+          out_of_service: { color: 'default', text: 'Đang bảo trì' },
         }
         const config = map[status] || { color: 'default', text: status }
         return <Tag color={config.color}>{config.text}</Tag>
@@ -174,47 +163,40 @@ const TableManagement = () => {
     {
       title: 'Hành động',
       key: 'action',
-      render: (_, record) => (
-        <span className="flex gap-2">
-          <Button 
-            type="text" 
-            icon={<Edit size={18} />} 
-            title="Sửa" 
-            className="text-blue-500" 
-            onClick={() => showModal(record)}
-          />
-          <Popconfirm
-            title="Làm mới mã QR"
-            description="Làm mới sẽ khiến mã QR cũ không còn hiệu lực. Bạn có chắc chắn?"
-            onConfirm={() => regenerateTokenMutation.mutate(record._id)}
-            okText="Làm mới"
-            cancelText="Hủy"
-          >
-            <Button 
-              type="text" 
-              icon={<RefreshCcw size={18} />} 
-              title="Làm mới QR" 
-              className="text-green-500" 
-              loading={regenerateTokenMutation.isPending && regenerateTokenMutation.variables === record._id}
+      align: 'center',
+      width: 200,
+      render: (_, record) => {
+        const deletable = record.status !== 'reserved' && record.status !== 'occupied'
+        return (
+          <div>
+            <Button
+              type="text"
+              icon={<Edit size={18} />}
+              title="Sửa"
+              className="text-blue-500"
+              onClick={() => showModal(record)}
             />
-          </Popconfirm>
-          <Popconfirm
-            title="Xóa bàn"
-            description="Bạn có chắc chắn muốn xóa bàn này?"
-            onConfirm={() => deleteMutation.mutate(record._id)}
-            okText="Xóa"
-            cancelText="Hủy"
-          >
-            <Button 
-              type="text" 
-              icon={<Trash2 size={18} />} 
-              title="Xóa" 
-              className="text-red-500" 
-              loading={deleteMutation.isPending && deleteMutation.variables === record._id}
-            />
-          </Popconfirm>
-        </span>
-      ),
+
+            {deletable && (
+              <Popconfirm
+                title="Xóa bàn"
+                description="Bạn có chắc chắn muốn xóa bàn này?"
+                onConfirm={() => deleteMutation.mutate(record._id)}
+                okText="Xóa"
+                cancelText="Hủy"
+              >
+                <Button
+                  type="text"
+                  icon={<Trash2 size={18} />}
+                  title="Xóa"
+                  className="text-red-500"
+                  loading={deleteMutation.isPending && deleteMutation.variables === record._id}
+                />
+              </Popconfirm>
+            )}
+          </div>
+        )
+      },
     },
   ]
 
@@ -226,9 +208,9 @@ const TableManagement = () => {
             <h1 className="font-bold text-3xl mb-2">Quản lý bàn ăn</h1>
             <Breadcrumb items={[{ title: 'Trang chủ' }, { title: 'Quản lý bàn ăn' }]} />
           </div>
-          <Button 
-            type="primary" 
-            className="rounded-xl flex items-center gap-2" 
+          <Button
+            type="primary"
+            className="rounded-xl flex items-center gap-2"
             icon={<Plus size={18} />}
             onClick={() => showModal()}
           >

@@ -56,10 +56,10 @@ const TableForm = ({
           rules={[{ required: true, message: 'Vui lòng chọn trạng thái' }]}
         >
           <Select placeholder="Chọn trạng thái">
-            <Select.Option value="available">Sẵn sàng</Select.Option>
+            <Select.Option value="available">Còn trống</Select.Option>
             <Select.Option value="occupied">Đang sử dụng</Select.Option>
             <Select.Option value="reserved">Đã đặt</Select.Option>
-            <Select.Option value="out_of_service">Tạm ngưng</Select.Option>
+            <Select.Option value="out_of_service">Đang bảo trì</Select.Option>
           </Select>
         </Form.Item>
 
