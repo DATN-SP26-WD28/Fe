@@ -17,23 +17,38 @@ export default function Dashboard() {
   // 1. Logic tính Top món ăn: Lấy từ các hóa đơn đã thanh toán để đảm bảo tính thực tế
   const topDishesData = useMemo(() => {
     const dishCounts = {};
-    // Quét qua tất cả hóa đơn, sau đó quét qua từng order trong hóa đơn đó (nếu có populate items)
-    // Hoặc đơn giản là quét qua các items của hóa đơn nếu backend trả về items kèm theo
+
+    // Duyệt qua danh sách hóa đơn đang có
     invoices.forEach(inv => {
-      // Giả sử backend trả về invoice kèm thông tin món (nếu không, dùng dữ liệu orders)
-      // Ở đây mình ưu tiên tính từ orders đã hoàn thành
-      inv.order_ids?.forEach(order => {
-        order.items?.forEach(item => {
-          const name = item.dish_id?.dish_name || "Món ẩn";
-          dishCounts[name] = (dishCounts[name] || 0) + (item.quantity || 0);
+      // 1. Kiểm tra mảng order_ids (Nơi chứa các đơn hàng của hóa đơn đó)
+      const orders = inv.order_ids || [];
+
+      orders.forEach(order => {
+        // 2. Kiểm tra mảng items (Danh sách món trong từng đơn)
+        // Lưu ý: Backend cần phải .populate('order_ids.items.dish_id') 
+        const items = order.items || [];
+
+        items.forEach(item => {
+          // Lấy tên món từ dish_id (nếu đã populate) hoặc từ chính item
+          const name = item.dish_id?.dish_name || item.name || "Món ẩn";
+          const quantity = Number(item.quantity) || 0;
+
+          // CHỈ TÍNH TIỀN MÓN KHÔNG BỊ HỦY (Theo logic 4 trạng thái của Khanh)
+          const status = item.status?.toLowerCase();
+          if (status !== 'canceled' && status !== 'cancelled' && status !== 'đã hủy') {
+            dishCounts[name] = (dishCounts[name] || 0) + quantity;
+          }
         });
       });
     });
 
-    return Object.entries(dishCounts)
+    // 3. Chuyển kết quả sang mảng để hiển thị biểu đồ
+    const result = Object.entries(dishCounts)
       .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
+      .sort((a, b) => b.count - a.count) // Món bán chạy nhất lên đầu
+      .slice(0, 5); // Lấy Top 5 món
+
+    return result;
   }, [invoices]);
 
   const fetchDashboardData = async () => {
