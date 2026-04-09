@@ -41,3 +41,20 @@ html {
   scroll-behavior: smooth;
   -webkit-tap-highlight-color: transparent;
 }
+
+/* Ant Design: Sider trigger color overrides */
+.ant-layout-sider-trigger {
+  background: var(--color-brand) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ant-layout-sider-trigger:hover,
+.ant-layout-sider-trigger:focus {
+  background: var(--color-brand) !important;
+}
+
+.ant-layout-sider-trigger .anticon {
+  color: inherit !important;
+}

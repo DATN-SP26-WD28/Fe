@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Card, Table, Tag, Breadcrumb, Button, Popconfirm, message } from 'antd'
+import { Card, Table, Tag, Breadcrumb, Button, Popconfirm, message, Avatar } from 'antd'
 import { Edit, Trash2, Plus } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import dishAPI from '@/configs/dish.api'
@@ -75,13 +75,7 @@ const DishManagement = () => {
     title: 'Hình ảnh',
     dataIndex: 'image',
     key: 'image',
-    render: (src) => (
-      <img
-        src={src}
-        alt="dish"
-        style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 8 }}
-      />
-    ),
+    render: (src) => <Avatar src={src} shape="square" size={100} />,
     width: 150,
   },
   {
@@ -97,13 +91,7 @@ const DishManagement = () => {
     render: (v) => <span>{formatCurrency(v)}</span>,
   },
   {
-    title: 'Mô tả',
-    dataIndex: 'description',
-    key: 'description',
-    render: (v) => <span className="line-clamp-2">{truncateText(v, 40)}</span>,
-  },
-  {
-    title: 'Tên danh mục',
+    title: 'Danh mục',
     dataIndex: 'category',
     key: 'category_name',
     render: (_, record) => <span>{record.category?.name || '-'}</span>,
@@ -115,8 +103,14 @@ const DishManagement = () => {
     render: (status) => {
       const color = STATUS_COLOR[status] || 'default'
       const label = STATUS_LABEL[status] || status
-      return <Tag color={color}>{label}</Tag>
+      return <Tag color={color} variant='solid'>{label}</Tag>
     },
+  },
+    {
+    title: 'Mô tả',
+    dataIndex: 'description',
+    key: 'description',
+    render: (v) => <span className="line-clamp-2 text-sm text-slate-600">{truncateText(v || 'Chưa có mô tả', 40)}</span>,
   },
   {
     title: 'Hành động',

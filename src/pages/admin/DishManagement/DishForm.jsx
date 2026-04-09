@@ -39,7 +39,7 @@ const DishForm = ({ isModalOpen, handleCancel, onFinish, editingDish, categories
     >
       <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ status: 'available' }}>
         <Form.Item name="name" label="Tên món" rules={[{ required: true, message: 'Vui lòng nhập tên món' }]}>
-          <Input />
+          <Input placeholder="Nhập tên món" />
         </Form.Item>
 
         <Form.Item name="categoryId" label="Danh mục" rules={[{ required: true, message: 'Chọn danh mục' }]}>
@@ -51,21 +51,21 @@ const DishForm = ({ isModalOpen, handleCancel, onFinish, editingDish, categories
         </Form.Item>
 
         <Form.Item name="price" label="Giá" rules={[{ required: true, message: 'Vui lòng nhập giá' }]}>
-          <InputNumber className="w-full" min={0} />
+          <InputNumber className="!w-full" min={0} placeholder='Nhập giá' />
         </Form.Item>
 
-        <Form.Item name="description" label="Mô tả">
-          <Input.TextArea rows={3} />
+        <Form.Item name="description" label="Mô tả" >
+          <Input.TextArea rows={3} placeholder="Nhập mô tả" />
         </Form.Item>
 
-        <Form.Item name="image" label="URL ảnh">
-          <Input />
+        <Form.Item name="image" label="URL ảnh" >
+          <Input placeholder="Nhập URL ảnh" />
         </Form.Item>
 
         <Form.Item name="status" label="Trạng thái">
           <Select>
-            <Select.Option value="available">Còn hàng</Select.Option>
-            <Select.Option value="out_of_stock">Hết hàng</Select.Option>
+            <Select.Option value="available">Còn món</Select.Option>
+            <Select.Option value="out_of_stock">Hết món</Select.Option>
           </Select>
         </Form.Item>
       </Form>
