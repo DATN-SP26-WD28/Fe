@@ -127,7 +127,7 @@ const TableOrderManager = ({ refreshData }) => {
       loadTables()
       if (refreshData) refreshData()
       if (refreshOrders) refreshOrders()
-    } catch (error) { message.error("Không thể thực hiện thanh toán") } finally { setSubmitting(false) }
+    } catch { message.error("Không thể thực hiện thanh toán") } finally { setSubmitting(false) }
   }
 
   const handleSwitchTable = async () => {
@@ -141,7 +141,7 @@ const TableOrderManager = ({ refreshData }) => {
       loadTables()
       if (refreshData) refreshData()
       if (refreshOrders) refreshOrders()
-    } catch (error) { message.error("Lỗi khi chuyển bàn") } finally { setSubmitting(false) }
+    } catch { message.error("Lỗi khi chuyển bàn") } finally { setSubmitting(false) }
   }
 
   const columns = [
@@ -229,7 +229,7 @@ const TableOrderManager = ({ refreshData }) => {
             {modalOrders.map((order) => {
               const codeTail = String(order?._id || '').toUpperCase();
               const payableItems = (order.items || []).filter(i => normalizeOrderStatus(itemStatusById[i._id] || i.status) === 'served' || i.status === 'Đã phục vụ');
-              {/* const otherItems = (order.items || []).filter(i => !payableItems.includes(i)); */}
+              {/* const otherItems = (order.items || []).filter(i => !payableItems.includes(i)); */ }
               const dataSource = order?.items ?? [];
 
               return (
@@ -242,42 +242,11 @@ const TableOrderManager = ({ refreshData }) => {
                     <div className='text-gray-800'>Tổng đơn đã phục vụ: <span className='font-bold text-orange-500'>{payableItems.reduce((s, i) => s + (i.price * i.quantity), 0).toLocaleString()}đ</span></div>
                   </div>
                   <div className='space-y-3'>
-                    {/* {payableItems.map((item) => (
-                      <div key={item._id} className='flex justify-between items-center'>
-                        <div className="flex flex-col">
-                          <span className='font-bold text-gray-700'>{item?.dish_id?.dish_name}</span>
-                          <Tag color="green" className="w-fit text-[10px] mt-1">Đã phục vụ</Tag>
-                        </div>
-                        <div className="text-right">
-                          <div className='text-xs text-gray-400'>x{item.quantity}</div>
-                          <div className='font-black text-orange-500'>{(item.price * item.quantity).toLocaleString()}đ</div>
-                        </div>
-                      </div>
-                    ))} */}
-                    {/* {otherItems.map((item) => {
-                      const status = normalizeOrderStatus(itemStatusById[item._id] || item.status);
-                      const isCancelled = status === 'cancelled' || status === 'Đã hủy';
-                      return (
-                        <div key={item._id} className='flex justify-between items-center opacity-50 bg-gray-50 p-2 rounded-lg border border-dashed'>
-                          <div className="flex flex-col">
-                            <span className={`text-xs ${isCancelled ? 'line-through text-red-400' : 'text-gray-500'}`}>{item?.dish_id?.dish_name}</span>
-                            <span className={`text-[9px] font-bold uppercase ${isCancelled ? 'text-red-500' : 'text-blue-400'}`}>
-                              {isCancelled ? 'Đã hủy (0đ)' : 'Đã huỷ'}
-                            </span>
-                          </div>
-                          <span className='font-bold text-gray-400 text-xs'>0đ</span>
-                        </div>
-                      )
-                    })} */}
                   </div>
                   <section>
                     <Divider>Danh sách món ăn đã gọi</Divider>
                     <Table dataSource={dataSource} columns={columns} pagination={false} />
                   </section>
-                  {/* <div className='flex justify-between border-t border-gray-100 mt-4 pt-3'>
-                    <span className='text-gray-400 text-[10px] uppercase font-black '>Cộng món đã nhận:</span>
-                    <span className='text-gray-800 font-black'>{payableItems.reduce((s, i) => s + (i.price * i.quantity), 0).toLocaleString()}đ</span>
-                  </div> */}
                 </div>
               )
             })}

@@ -1,7 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 // Layouts
 import AdminLayout from '../layouts/AdminLayout'
-import ClientLayout from '@/layouts/ClientLayout'
 import GuestLayout from '@/layouts/GuestLayout'
 import ProtectedRoute from './ProtectedRoute'
 import PublicRoute from './PublicRoute'

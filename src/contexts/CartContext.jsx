@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Modal, List, Button, Input, Divider, Typography, Space, Badge, message } from 'antd';
-import { ShoppingCartOutlined, SendOutlined, PlusOutlined, MinusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Modal, List, Button, Input, Typography, Space, Badge, message } from 'antd';
+import { ShoppingCartOutlined, PlusOutlined, MinusOutlined } from '@ant-design/icons';
 import { parsePrice } from '@/shared/utils/currency';
 import orderAPI from '@/configs/order.api';
 
@@ -82,7 +82,7 @@ export const CartProvider = ({ children }) => {
             {children}
             <Modal
                 title={
-                    <div className="flex items-center gap-2 border-b pb-3">
+                    <div className="flex items-center gap-2 pb-3">
                         <ShoppingCartOutlined className="text-orange-500 text-xl" />
                         <span className="text-lg font-bold text-gray-800">Món ăn đã chọn ({totalItems})</span>
                     </div>
@@ -101,7 +101,8 @@ export const CartProvider = ({ children }) => {
                         locale={{ emptyText: <div className="py-10 text-gray-400">Chưa có món nào trong giỏ</div> }}
                         renderItem={(item) => (
                             <List.Item className="border-b-gray-50">
-                                <div className="flex w-full justify-between items-center py-1">
+                                <div className="flex w-full justify-between items-center py-1 gap-3">
+                                    <img src={item.image} alt={item.name} width={80} height={80} className='size-20 rounded-lg object-cover' />
                                     <div className="flex-1">
                                         <Text strong className="text-gray-800 block">{item.name}</Text>
                                         <Text className="text-orange-500 font-medium">{item.price?.toLocaleString()}đ</Text>
@@ -130,12 +131,12 @@ export const CartProvider = ({ children }) => {
                     </div>
 
                     <Button
-                        type="primary" block size="large" icon={<SendOutlined />}
+                        type="primary" block size="large"
                         loading={isOrdering} onClick={handleCheckout}
                         disabled={cart.length === 0}
                         className="h-14 rounded-2xl bg-[#f07f29] hover:bg-[#cf6a20] border-none text-lg font-bold shadow-lg shadow-orange-200"
                     >
-                        XÁC NHẬN GỬI ĐƠN
+                        Đặt món
                     </Button>
                 </div>
             </Modal>
@@ -146,18 +147,18 @@ export const CartProvider = ({ children }) => {
                     className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-lg z-50 animate-bounce-in"
                     onClick={() => setIsModalOpen(true)}
                 >
-                    <div className="bg-[#2b1a0f] text-white p-4 rounded-3xl flex justify-between items-center shadow-2xl cursor-pointer hover:scale-105 transition-transform">
+                    <div className="p-4 rounded-2xl flex justify-between items-center cursor-pointer shadow-sm text-white bg-orange-50">
                         <Space size="large">
                             <Badge count={totalItems} color="#f07f29" offset={[5, -5]}>
                                 <ShoppingCartOutlined className="text-2xl" />
                             </Badge>
                             <div>
-                                <div className="text-[10px] uppercase text-gray-400 font-bold leading-none mb-1">Món ăn đã chọn</div>
-                                <div className="font-bold text-lg leading-none">{totalPrice.toLocaleString()}đ</div>
+                                <div className="text-[10px] uppercase text-slate-800 font-bold leading-none mb-1">Món ăn đã chọn</div>
+                                <div className="font-bold text-lg leading-none text-orange-500">{totalPrice.toLocaleString()}đ</div>
                             </div>
                         </Space>
                         <div className="bg-[#f07f29] px-4 py-2 rounded-xl font-bold text-sm">
-                            XEM GIỎ HÀNG
+                            Xem giỏ hàng
                         </div>
                     </div>
                 </div>

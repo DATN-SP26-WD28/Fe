@@ -91,7 +91,7 @@ const MenuInterface = () => {
               </div>
             </div>
           </div>
-          <span className="bg-gradient-to-r from-orange-100 to-orange-50 text-[#f07f29] px-4 py-2 rounded-full text-sm font-bold border border-orange-200">{dishes.length} items</span>
+          <span className="bg-gradient-to-r from-orange-100 to-orange-50 text-[#f07f29] px-4 py-2 rounded-full text-sm font-bold border border-orange-200">{dishes.length} món</span>
         </div>
 
         {/* Dish Grid */}

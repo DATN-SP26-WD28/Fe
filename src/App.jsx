@@ -2,6 +2,7 @@ import { ConfigProvider } from 'antd'
 import AppRoutes from './routes/AppRouters'
 // 1. Import CartProvider bạn vừa tạo
 import { CartProvider } from './contexts/CartContext'
+import { SocketProvider } from './contexts/SocketContext'
 
 const BRAND_COLOR = '#f07f29'
 
@@ -33,11 +34,13 @@ function App() {
       }}
     >
       {/* 2. Bao bọc toàn bộ ứng dụng bằng CartProvider */}
-      <CartProvider>
-        <div className="bg-[#F2F2F2] min-h-screen">
-          <AppRoutes />
-        </div>
-      </CartProvider>
+      <SocketProvider>
+        <CartProvider>
+          <div className="bg-[#F2F2F2] min-h-screen">
+            <AppRoutes />
+          </div>
+        </CartProvider>
+      </SocketProvider>
     </ConfigProvider>
   )
 }

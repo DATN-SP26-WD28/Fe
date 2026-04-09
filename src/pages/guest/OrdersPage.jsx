@@ -1,9 +1,12 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Spin, message, Modal, Radio, Space, Empty, Tag } from 'antd'
+import { Spin, message, Modal, Radio, Space, Empty, Tag, notification } from 'antd'
 import { CreditCardOutlined, WalletOutlined, ArrowLeftOutlined, PlusOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import orderAPI from '@/configs/order.api'
 import paymentAPI from '@/configs/payment.api'
+import { useSocket } from '@/contexts/SocketContext'
+import { ORDER_ITEM_STATUS_MAP, normalizeOrderStatus } from '@/shared/constants/app.constants'
+import { SOCKET_EVENTS } from '@/shared/constants/socket.constants'
 import { Dot } from 'lucide-react'
 
 const formatCurrency = (v) => new Intl.NumberFormat('vi-VN').format(v) + 'đ'
@@ -16,6 +19,10 @@ const OrdersPage = () => {
   const [isPayModalOpen, setIsPayModalOpen] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState('vnpay')
   const [processPaymentLoading, setProcessPaymentLoading] = useState(false)
+  const { socket, isConnected } = useSocket()
+  const [notificationApi, notificationContextHolder] = notification.useNotification()
+  const lastStatusEventRef = useRef('')
+  const refreshTimeoutRef = useRef(null)
 
   const flattenedItems = useMemo(() => {
     return orders.flatMap(order =>
@@ -73,9 +80,81 @@ const OrdersPage = () => {
 
   useEffect(() => {
     fetchOrders()
-    const interval = setInterval(fetchOrders, 10000)
-    return () => clearInterval(interval)
   }, [fetchOrders])
+
+  const scheduleFetchOrders = useCallback(() => {
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current)
+    }
+
+    refreshTimeoutRef.current = setTimeout(() => {
+      fetchOrders()
+    }, 450)
+  }, [fetchOrders])
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!socket || !isConnected || !tableId) return
+    socket.emit(SOCKET_EVENTS.JOIN_TABLE, String(tableId))
+  }, [socket, isConnected, tableId])
+
+  useEffect(() => {
+    if (!socket) return
+
+    const onOrderCreated = (payload) => {
+      const isSameTable =
+        String(payload?.tableId || '') === String(tableId) ||
+        String(payload?.tableNumber || '') === String(tableId)
+      if (!isSameTable) return
+      scheduleFetchOrders()
+    }
+
+    const onItemStatusUpdated = (payload) => {
+      const isSameTable =
+        String(payload?.tableId || '') === String(tableId) ||
+        String(payload?.tableNumber || '') === String(tableId)
+      if (!isSameTable) return
+
+      const eventKey = `${payload?.itemId || ''}:${payload?.newStatus || ''}:${payload?.updatedAt || ''}`
+      if (eventKey && lastStatusEventRef.current === eventKey) return
+      lastStatusEventRef.current = eventKey
+
+      const oldStatus = normalizeOrderStatus(payload.oldStatus)
+      const newStatus = normalizeOrderStatus(payload.newStatus)
+      if (oldStatus === newStatus) return
+      const oldLabel = ORDER_ITEM_STATUS_MAP[oldStatus]?.label || oldStatus
+      const newLabel = ORDER_ITEM_STATUS_MAP[newStatus]?.label || newStatus
+
+      notificationApi.info({
+        message: 'Món ăn đã đổi trạng thái',
+        description: `${oldLabel} -> ${newLabel}`,
+        placement: 'topRight',
+      })
+
+      scheduleFetchOrders()
+    }
+
+    socket.on(SOCKET_EVENTS.ORDER_CREATED, onOrderCreated)
+    socket.on(SOCKET_EVENTS.ORDER_ITEM_STATUS_UPDATED, onItemStatusUpdated)
+
+    return () => {
+      socket.off(SOCKET_EVENTS.ORDER_CREATED, onOrderCreated)
+      socket.off(SOCKET_EVENTS.ORDER_ITEM_STATUS_UPDATED, onItemStatusUpdated)
+    }
+  }, [socket, tableId, scheduleFetchOrders, notificationApi])
+
+  useEffect(() => {
+    if (isConnected) return
+    const interval = setInterval(fetchOrders, 30000)
+    return () => clearInterval(interval)
+  }, [isConnected, fetchOrders])
 
   const handleProcessPayment = async () => {
     try {
@@ -109,14 +188,16 @@ const OrdersPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-50 to-slate-100">
         <Spin size="large" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-white text-slate-900">
+    <>
+      {notificationContextHolder}
+      <div className="min-h-screen bg-white text-slate-900">
       <div className="sticky top-0 z-40 bg-white border-b border-slate-200">
         <div className="mx-auto max-w-6xl px-4">
           <div className="flex items-center justify-start gap-5 py-4">
@@ -174,7 +255,7 @@ const OrdersPage = () => {
                   return (
                     <div key={idx} className="flex items-start gap-4 pb-4 border-b border-slate-100 last:border-b-0">
                       {/* Image */}
-                      <div className="flex-shrink-0">
+                      <div className="shrink-0">
                         <img
                           src={dishImage}
                           alt={item.dish_id?.dish_name || 'Món ăn'}
@@ -190,12 +271,15 @@ const OrdersPage = () => {
                             Số lượng: {item.quantity}
                           </span>
                           <p className="mt-1 text-xs text-slate-400 line-clamp-2">{item.dish_id.description || 'Chưa có ghi chú'}</p>
+                          <p>
+                            Trạng thái: <Tag>{ORDER_ITEM_STATUS_MAP[normalizeOrderStatus(item.status)]?.label || item.status || 'Chưa xác định'}</Tag>
+                          </p>
                         </div>
                         <div className="mt-2 flex items-center gap-3">
 
                         </div>
                       </div>
-                      <div className="text-right flex-shrink-0">
+                      <div className="text-right shrink-0">
                         <p className="font-semibold text-slate-900 text-base">{formatCurrency(itemTotal)}</p>
                       </div>
                     </div>
@@ -205,7 +289,7 @@ const OrdersPage = () => {
             </div>
 
             {/* Payment Summary */}
-            <div className="rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100/50 p-6 shadow-sm border border-orange-200">
+            <div className="rounded-2xl bg-linear-to-br from-orange-50 to-orange-100/50 p-6 shadow-sm border border-orange-200">
               <div className=" border-orange-200">
                 <div className="flex justify-between items-center">
                   <span className="text-lg font-bold text-slate-900">Tổng cộng</span>
@@ -301,7 +385,8 @@ const OrdersPage = () => {
           </div>
         </div>
       </Modal>
-    </div>
+      </div>
+    </>
   )
 }
 
