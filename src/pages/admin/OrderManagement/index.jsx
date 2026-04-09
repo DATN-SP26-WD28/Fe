@@ -2,7 +2,9 @@ import OrderCreateModal from '@/components/OrderCreateModal'
 import TableOrderManager from '@/components/TableOrderManager'
 import orderAPI from '@/configs/order.api'
 import orderItemAPI from '@/configs/orderItem.api'
+import { useSocket } from '@/contexts/SocketContext'
 import { OrderStatusProvider, useOrderStatus } from '@/contexts/OrderStatusContext'
+import { SOCKET_EVENTS } from '@/shared/constants/socket.constants'
 import {
   ORDER_ITEM_STATUS,
   ORDER_ITEM_STATUS_MAP,
@@ -10,7 +12,7 @@ import {
   normalizeOrderStatus,
 } from '@/shared/constants/app.constants'
 import { CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, SyncOutlined } from '@ant-design/icons'
-import { App, Breadcrumb, Button, Card, Select, Table, Tag, message } from 'antd'
+import { App, Breadcrumb, Button, Card, Select, Table, Tag, message, notification } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 // --- CÁC HÀM HELPER GIỮ NGUYÊN ---
@@ -61,6 +63,8 @@ const flattenOrdersToItemRows = (orders = [], itemStatusById = {}) => {
 
 const OrderManagementContent = () => {
   const { orders, itemStatusById, hydrateOrders, applyItemStatusUpdate } = useOrderStatus()
+  const { socket, isConnected } = useSocket()
+  const [notificationApi, notificationContextHolder] = notification.useNotification()
   const [loading, setLoading] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [updatingItemId, setUpdatingItemId] = useState(null)
@@ -92,6 +96,50 @@ const OrderManagementContent = () => {
     fetchOrders()
   }, [fetchOrders])
 
+  useEffect(() => {
+    if (!socket || !isConnected) return
+    socket.emit(SOCKET_EVENTS.JOIN_ADMIN_ORDERS)
+  }, [socket, isConnected])
+
+  useEffect(() => {
+    if (!socket) return
+
+    const onOrderCreated = () => {
+      fetchOrders()
+    }
+
+    const onItemStatusUpdated = (payload) => {
+      if (!payload?.itemId || !payload?.newStatus) return
+
+      const oldStatus = normalizeOrderStatus(payload.oldStatus)
+      const newStatus = normalizeOrderStatus(payload.newStatus)
+      const oldLabel = ORDER_ITEM_STATUS_MAP[oldStatus]?.label || oldStatus
+      const newLabel = ORDER_ITEM_STATUS_MAP[newStatus]?.label || newStatus
+
+      notificationApi.success({
+        message: 'Cập nhật trạng thái món thành công',
+        description: `${oldLabel} -> ${newLabel}`,
+        placement: 'topRight',
+      })
+
+      applyItemStatusUpdate(payload.itemId, payload.newStatus)
+    }
+
+    socket.on(SOCKET_EVENTS.ORDER_CREATED, onOrderCreated)
+    socket.on(SOCKET_EVENTS.ORDER_ITEM_STATUS_UPDATED, onItemStatusUpdated)
+
+    return () => {
+      socket.off(SOCKET_EVENTS.ORDER_CREATED, onOrderCreated)
+      socket.off(SOCKET_EVENTS.ORDER_ITEM_STATUS_UPDATED, onItemStatusUpdated)
+    }
+  }, [socket, fetchOrders, applyItemStatusUpdate, notificationApi])
+
+  useEffect(() => {
+    if (isConnected) return
+    const interval = setInterval(fetchOrders, 30000)
+    return () => clearInterval(interval)
+  }, [isConnected, fetchOrders])
+
   const countStatus = (statusKey) => {
     const allRows = flattenOrdersToItemRows(orders, itemStatusById);
     return allRows.filter((item) => item.itemStatus === statusKey).length
@@ -113,7 +161,6 @@ const OrderManagementContent = () => {
     try {
       await orderItemAPI.updateStatus(itemId, nextStatus)
       applyItemStatusUpdate(itemId, nextStatus)
-      message.success('Đã cập nhật trạng thái món ăn!')
     } catch {
       message.error('Lỗi khi cập nhật trạng thái món!')
     } finally {
@@ -222,6 +269,7 @@ const OrderManagementContent = () => {
 
   return (
     <>
+      {notificationContextHolder}
       <section className="flex justify-between items-end mb-2">
         <section className="mb-3">
           <h1 className="font-bold text-3xl mb-2">Quản lý đơn hàng</h1>
