@@ -187,13 +187,13 @@ const TableOrderManager = ({ refreshData }) => {
           return (
             <div key={table._id} role='button' onClick={() => openTableModal(table)}
               className={`text-sm flex items-stretch gap-2 border p-2 rounded-md min-w-24 min-h-24 cursor-pointer transition-all ${isOccupied ? 'border-orange-400 bg-orange-50 shadow-sm' : 'border-gray-300 hover:border-blue-400'}`}>
-              <section className='flex flex-col items-center justify-center gap-2 min-w-[50px]'>
+              <section className='flex flex-col items-center justify-center gap-2 min-w-12.5'>
                 <div className='font-bold text-center text-lg'>{table.table_number}</div>
                 <div className='flex items-center gap-1 text-gray-500'><Users size={14} /><span>{table.capacity || 0}</span></div>
               </section>
               <div className='shrink-0 w-px grow h-auto bg-gray-200'></div>
               {!isOccupied ? (
-                <section className='flex flex-col items-center justify-center gap-1 grow text-gray-400'>
+                <section className='flex flex-col items-center justify-center gap-1 grow text-gray-400 min-w-12.5'>
                   <ClipboardCheck size={20} /><span className='text-[10px] uppercase font-bold'>Trống</span>
                 </section>
               ) : (

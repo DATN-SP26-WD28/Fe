@@ -69,11 +69,11 @@ const CategoryManagement = () => {
 
   const columns = [
     {
-      title: 'Ảnh',
+      title: 'Hình ảnh',
       dataIndex: 'image',
       key: 'image',
-      width: 200,
-      render: (src) => <Avatar src={src} shape="square" size={150} />,
+      width: 150,
+      render: (src) => <Avatar src={src} shape="square" size={100} />,
     },
     {
       title: 'Tên danh mục',
@@ -85,7 +85,7 @@ const CategoryManagement = () => {
       title: 'Mô tả',
       dataIndex: 'description',
       key: 'description',
-      render: (v) => <span>{v || '-'}</span>,
+      render: (v) => <span className="line-clamp-2 text-sm text-slate-600">{v || 'Chưa có mô tả'}</span>,
     },
     {
       title: 'Trạng thái',
@@ -97,7 +97,7 @@ const CategoryManagement = () => {
           Inactive: { color: 'default', text: 'Không hoạt động' },
         }
         const cfg = map[status] || { color: 'default', text: status }
-        return <Tag color={cfg.color}>{cfg.text}</Tag>
+        return <Tag color={cfg.color} variant='solid'>{cfg.text}</Tag>
       },
     },
     {

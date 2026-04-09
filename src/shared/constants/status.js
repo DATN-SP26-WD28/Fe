@@ -4,8 +4,8 @@ export const STATUS_COLOR = {
 }
 
 export const STATUS_LABEL = {
-  available: 'Còn hàng',
-  out_of_stock: 'Hết hàng',
+  available: 'Còn món',
+  out_of_stock: 'Hết món',
 }
 
 export default {

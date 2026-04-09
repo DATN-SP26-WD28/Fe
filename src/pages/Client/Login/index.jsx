@@ -14,9 +14,6 @@ const Login = () => {
       // 1. Lưu Token vào localStorage để dùng cho các API cần Auth (như /me)
       localStorage.setItem('token', res.data.token)
       localStorage.setItem('user', JSON.stringify(res.data.user))
-
-      message.success('Mừng bạn trở lại với Roosta!')
-
       // 2. Chuyển hướng về trang chủ hoặc trang trước đó
       navigate('/admin')
     },
@@ -94,7 +91,7 @@ const Login = () => {
               />
             </Form.Item>
 
-            <div className="mb-6 flex items-center justify-between gap-3">
+            {/* <div className="mb-6 flex items-center justify-between gap-3">
               <Form.Item name="remember" valuePropName="checked" noStyle>
                 <Checkbox className="text-xs text-[#6d5645]">Ghi nhớ tôi</Checkbox>
               </Form.Item>
@@ -104,7 +101,7 @@ const Login = () => {
               >
                 Quên mật khẩu?
               </Link>
-            </div>
+            </div> */}
 
             <Form.Item className="mb-0">
               <Button

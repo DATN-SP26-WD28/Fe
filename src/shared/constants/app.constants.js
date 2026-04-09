@@ -26,7 +26,6 @@ export const ORDER_STATUS_NORMALIZE_MAP = {
   'in_progress': ORDER_ITEM_STATUS.confirmed,
   'preparing': ORDER_ITEM_STATUS.confirmed,
   'ready': ORDER_ITEM_STATUS.confirmed,
-  'in_progress': ORDER_ITEM_STATUS.confirmed,
   // Xử lý lỗi chính tả (canceled vs cancelled)
   'cancelled': ORDER_ITEM_STATUS.canceled,
   'da huy': ORDER_ITEM_STATUS.canceled,
