@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button, Divider, Form, Input, InputNumber, Modal, Select, Space, Typography, message } from 'antd'
+import { Button, Divider, Empty, Form, Input, InputNumber, Modal, Select, Space, Typography, message } from 'antd'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { fetchTables } from '@/configs/table.api'
 import dishAPI from '@/configs/dish.api'
@@ -24,8 +24,15 @@ const OrderCreateModal = ({ open, onCancel, onSuccess }) => {
   }, [selectedItems])
 
   const tableSelectOptions = useMemo(() => {
+    const statusMap = {
+      available: 'Còn trống',
+      occupied: 'Đang sử dụng',
+      reserved: 'Đã đặt',
+      out_of_service: 'Đang bảo trì',
+    }
+
     return tableOptions.map((table) => ({
-      label: `Bàn ${table.table_number} (${table.status || 'available'})`,
+      label: `Bàn ${table.table_number} (${statusMap[table.status] || statusMap.available})`,
       value: table._id,
     }))
   }, [tableOptions])
@@ -182,7 +189,7 @@ const OrderCreateModal = ({ open, onCancel, onSuccess }) => {
           />
         </Form.Item>
 
-        <div className='flex gap-2'>
+        <div className='flex gap-2 mb-4'>
           <Select
             className='flex-1'
             placeholder='Chọn món ăn để thêm'
@@ -204,21 +211,26 @@ const OrderCreateModal = ({ open, onCancel, onSuccess }) => {
           </Button>
         </div>
 
-        <Divider className='my-4' />
-
         <div className='space-y-3 max-h-80 overflow-auto pr-1'>
           {!selectedItems.length && (
-            <Text type='secondary'>Chưa có món nào trong đơn.</Text>
+            <Empty description='Chưa có món nào trong đơn' />
           )}
 
           {selectedItems.map((item) => (
             <div
               key={item.dish_id}
-              className='border border-gray-200 rounded-lg p-3 flex items-center justify-between gap-3'
+              className='border border-gray-200 rounded-lg p-3 flex items-center justify-between gap-3 mb-4 bg-orange-50'
             >
-              <div className='flex-1 min-w-0'>
-                <div className='font-medium truncate'>{item.dish_name}</div>
-                <Text type='secondary'>{formatVnd(item.price)} / món</Text>
+              <div>
+                <img
+                  src={item.image_url}
+                  alt={item.dish_name}
+                  className='w-16 h-16 object-cover rounded-md'
+                />
+                <div className='flex-1 min-w-0'>
+                  <div className='font-medium truncate'>{item.dish_name}</div>
+                  <Text type='secondary'>{formatVnd(item.price)} / món</Text>
+                </div>
               </div>
 
               <div className='flex items-center gap-2'>
