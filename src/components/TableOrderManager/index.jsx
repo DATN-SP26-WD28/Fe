@@ -52,6 +52,7 @@ const TableOrderManager = ({ refreshData }) => {
   const [targetTableId, setTargetTableId] = useState(null)
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false)
   const [currentPrintOrder, setCurrentPrintOrder] = useState(null)
+  const [currentPrintOrderConfirmedItems, setCurrentPrintOrderConfirmedItems] = useState([])
 
   // LOGIC TÍNH TỔNG TIỀN QUAN TRỌNG: Chỉ tính các món 'served' (Đã phục vụ)
   const totalBill = useMemo(() => {
@@ -148,8 +149,9 @@ const TableOrderManager = ({ refreshData }) => {
     } catch { message.error("Lỗi khi chuyển bàn") } finally { setSubmitting(false) }
   }
 
-  const handleOpenTicketPreview = (order) => {
+  const handleOpenTicketPreview = (order, confirmedItems = []) => {
     setCurrentPrintOrder(order)
+    setCurrentPrintOrderConfirmedItems(Array.isArray(confirmedItems) ? confirmedItems : [])
     setIsTicketModalOpen(true)
   }
 
@@ -255,9 +257,14 @@ const TableOrderManager = ({ refreshData }) => {
                       <div className='text-gray-800'>Cập nhật: <span className='font-semibold'>{new Date(order.updatedAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</span></div>
                       <div className='text-gray-800'>Tổng đơn đã phục vụ: <span className='font-bold text-orange-500'>{payableItems.reduce((s, i) => s + (i.price * i.quantity), 0).toLocaleString()}đ</span></div>
                     </div>
-                    <div className='space-y-3'>
-                      <Button type="primary" onClick={() => handleOpenTicketPreview(order)}><ChefHat size={16} />Phiếu gọi món</Button>
-                    </div>
+                            <div className='space-y-3'>
+                              {(() => {
+                                const confirmedItems = (order.items || []).filter(i => normalizeOrderStatus(itemStatusById[i._id] || i.status) === ORDER_ITEM_STATUS.confirmed)
+                                return (
+                                  <Button type="primary" disabled={confirmedItems.length === 0} onClick={() => handleOpenTicketPreview(order, confirmedItems)}><ChefHat size={16} />Phiếu gọi món</Button>
+                                )
+                              })()}
+                            </div>
                   </section>
                   <section>
                     <Divider>Danh sách món ăn đã gọi</Divider>
@@ -303,7 +310,7 @@ const TableOrderManager = ({ refreshData }) => {
               day: '2-digit', month: '2-digit', year: 'numeric', 
               hour: '2-digit', minute: '2-digit' 
             })}
-            items={currentPrintOrder.items}
+            items={currentPrintOrderConfirmedItems}
             guestName={currentPrintOrder.guest_id?.username || 'Khách vãng lai'}
           />
         )}
