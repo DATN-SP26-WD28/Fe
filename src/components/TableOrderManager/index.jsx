@@ -1,15 +1,16 @@
-import { ClipboardCheck, CookingPot, Users, ArrowLeftRight, Wallet, Clock, Check, ChefHat, Printer, ArrowDownUp } from 'lucide-react'
+import { ClipboardCheck, CookingPot, Users, ArrowLeftRight, Wallet, Clock, Check, ChefHat, Printer, ArrowDownUp, ListChecks } from 'lucide-react'
 import React, { useEffect, useMemo, useState } from 'react'
 import { Empty, Modal, Spin, Tag, Button, Divider, message, Popconfirm, Select, Table, Tooltip } from 'antd'
 import { fetchTables } from '@/configs/table.api'
 import orderAPI from '@/configs/order.api'
+import orderItemAPI from '@/configs/orderItem.api'
 import paymentAPI from '@/configs/payment.api'
 import { useOrderStatus } from '@/contexts/OrderStatusContext'
 import { printElement } from '@/shared/utils/print'
 import KitchenTicket from '../KitchenTicket'
 import {
   ORDER_ITEM_STATUS,
-  ORDER_ITEM_STATUS_MAP,
+  ORDER_ITEM_STATUS_OPTIONS,
   ORDER_PREPARING_STATUSES,
   ORDER_SERVED_STATUSES,
   normalizeOrderStatus,
@@ -40,8 +41,9 @@ const aggregateItemStats = (orders = [], itemStatusById = {}) => {
 }
 
 const TableOrderManager = ({ refreshData }) => {
-  const { orders, itemStatusById, refreshOrders } = useOrderStatus() // Thêm refreshOrders từ context
+  const { orders, itemStatusById, refreshOrders, applyItemStatusUpdate } = useOrderStatus()
   const [tables, setTables] = useState([])
+  const [updatingItemId, setUpdatingItemId] = useState(null)
   const [tableItemStats, setTableItemStats] = useState({})
   const [open, setOpen] = useState(false)
   const [selectedTable, setSelectedTable] = useState(null)
@@ -159,6 +161,80 @@ const TableOrderManager = ({ refreshData }) => {
     printElement('kitchen-ticket-content', `Phieu_Bep_Ban_${selectedTable?.table_number}`)
   }
 
+  const handleUpdateStatus = async (itemId, nextStatus, currentStatus) => {
+    if (!itemId || nextStatus === currentStatus) return
+
+    if (currentStatus === ORDER_ITEM_STATUS.served || currentStatus === ORDER_ITEM_STATUS.canceled) {
+      return message.error('Món ăn đã kết thúc quy trình, không thể thay đổi!')
+    }
+
+    if (currentStatus === ORDER_ITEM_STATUS.confirmed && nextStatus === ORDER_ITEM_STATUS.pending) {
+      return message.warning('Món đã xác nhận không thể quay lại trạng thái chờ!')
+    }
+
+    setUpdatingItemId(itemId)
+    try {
+      await orderItemAPI.updateStatus(itemId, nextStatus)
+      applyItemStatusUpdate(itemId, nextStatus)
+    } catch {
+      message.error('Lỗi khi cập nhật trạng thái món!')
+    } finally {
+      setUpdatingItemId(null)
+    }
+  }
+
+  const hasPending = useMemo(() => {
+    if (!Array.isArray(modalOrders) || modalOrders.length === 0) return false
+    for (const order of modalOrders) {
+      const items = Array.isArray(order?.items) ? order.items : []
+      for (const item of items) {
+        const status = normalizeOrderStatus(itemStatusById[item?._id] || item?.status)
+        if (status === ORDER_ITEM_STATUS.pending) return true
+      }
+    }
+    return false
+  }, [modalOrders, itemStatusById])
+
+  const handleQuickConfirm = async () => {
+    if (!hasPending) return
+    setSubmitting(true)
+    try {
+      const pendingItemIds = modalOrders.flatMap((order) => (order.items || [])
+        .filter((i) => normalizeOrderStatus(itemStatusById[i._id] || i.status) === ORDER_ITEM_STATUS.pending)
+        .map((i) => i._id)
+      ).filter(Boolean)
+
+      if (!pendingItemIds.length) {
+        message.info('Không có món chờ xử lý')
+        setSubmitting(false)
+        return
+      }
+
+      await Promise.all(pendingItemIds.map((id) => orderItemAPI.updateStatus(id, ORDER_ITEM_STATUS.confirmed)))
+
+      // Update context and local modal state
+      pendingItemIds.forEach((id) => applyItemStatusUpdate(id, ORDER_ITEM_STATUS.confirmed))
+
+      setModalOrders((prev) => prev.map((order) => ({
+        ...order,
+        items: (order.items || []).map((item) => {
+          const norm = normalizeOrderStatus(itemStatusById[item._id] || item.status)
+          if (norm === ORDER_ITEM_STATUS.pending) return { ...item, status: ORDER_ITEM_STATUS.confirmed }
+          return item
+        })
+      })))
+
+      message.success(`Xác nhận nhanh ${pendingItemIds.length} món thành công`)
+      loadTables()
+      if (refreshOrders) refreshOrders()
+    } catch (err) {
+      console.error(err)
+      message.error('Lỗi khi xác nhận nhanh')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   const columns = [
     {
       title: 'Món ăn',
@@ -181,8 +257,17 @@ const TableOrderManager = ({ refreshData }) => {
       key: 'status',
       render: (text, record) => {
         const status = normalizeOrderStatus(itemStatusById?.[record?._id] || record?.status || text)
-        const map = ORDER_ITEM_STATUS_MAP[status] || { color: 'default', label: status }
-        return <Tag color={map.color}>{map.label}</Tag>
+        const isLocked = status === ORDER_ITEM_STATUS.served || status === ORDER_ITEM_STATUS.canceled
+        return (
+          <Select
+            value={status}
+            options={ORDER_ITEM_STATUS_OPTIONS}
+            loading={updatingItemId === record._id}
+            onChange={(value) => handleUpdateStatus(record._id, value, status)}
+            style={{ minWidth: 150 }}
+            disabled={isLocked}
+          />
+        )
       }
     },
     {
@@ -226,19 +311,37 @@ const TableOrderManager = ({ refreshData }) => {
       <Modal open={open} width={800} onCancel={() => setOpen(false)}
         bodyStyle={{ maxHeight: '70vh', overflowY: 'auto' }}
         title={selectedTable ? `Chi tiết đơn hàng - Bàn ${selectedTable.table_number}` : 'Chi tiết'}
-        footer={[
-          <Button key="close" onClick={() => setOpen(false)}>Đóng</Button>,
-          modalOrders.length > 0 && (
-            <Button key="switch" icon={<ArrowLeftRight size={16} />} onClick={() => setIsSwitchModalOpen(true)} className="border-blue-500 text-blue-500">
-              Chuyển bàn
-            </Button>
-          ),
-          modalOrders.length > 0 && (
-            <Popconfirm key="pay" title={`Thanh toán ${totalBill.toLocaleString()}đ cho món đã phục vụ?`} onConfirm={handleCounterPayment}>
-              <Button type="primary"><Wallet size={16} /> Thanh toán</Button>
-            </Popconfirm>
-          )
-        ]}
+        footer={
+          <div className="w-full flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {modalOrders.length > 0 && (
+                <Button key="switch" icon={<ArrowLeftRight size={16} />} onClick={() => setIsSwitchModalOpen(true)} className="border-blue-500 text-blue-500">
+                  Chuyển bàn
+                </Button>
+              )}
+
+              {modalOrders.length > 0 && (
+                <Popconfirm key="pay" title={`Thanh toán ${totalBill.toLocaleString()}đ cho món đã phục vụ?`} onConfirm={handleCounterPayment}>
+                  <Button type="primary"><Wallet size={16} /> Thanh toán</Button>
+                </Popconfirm>
+              )}
+            </div>
+
+            <div>
+              <Popconfirm
+                title="Xác nhận những đơn hàng đang chờ?"
+                onConfirm={handleQuickConfirm}
+                okText="Xác nhận"
+                cancelText="Hủy"
+                disabled={!hasPending}
+              >
+                <Button icon={<ListChecks size={16} />} loading={submitting} disabled={!hasPending}>
+                  Xác nhận nhanh
+                </Button>
+              </Popconfirm>
+            </div>
+          </div>
+        }
         centered
       >
         {modalLoading ? <div className='py-8 flex justify-center'><Spin /></div> : modalOrders.length === 0 ? <Empty description='Bàn trống' /> : (
