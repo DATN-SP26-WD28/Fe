@@ -12,7 +12,7 @@ import {
   normalizeOrderStatus,
 } from '@/shared/constants/app.constants'
 import { CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, SyncOutlined } from '@ant-design/icons'
-import { App, Breadcrumb, Button, Card, Select, Table, Tag, message, notification } from 'antd'
+import { App, Breadcrumb, Button, Card, Select, Table, Tag, message, notification, Input } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 // --- CÁC HÀM HELPER GIỮ NGUYÊN ---
@@ -69,12 +69,27 @@ const OrderManagementContent = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [updatingItemId, setUpdatingItemId] = useState(null)
   const [filterStatus, setFilterStatus] = useState(null);
+  const [searchText, setSearchText] = useState('');
+  const { Search } = Input
 
   const dataSource = useMemo(() => {
     const allRows = flattenOrdersToItemRows(orders, itemStatusById);
-    if (!filterStatus) return allRows;
-    return allRows.filter(row => row.itemStatus === filterStatus);
-  }, [orders, itemStatusById, filterStatus])
+    let rows = allRows
+
+    if (filterStatus) rows = rows.filter((row) => row.itemStatus === filterStatus)
+
+    const q = (searchText || '').trim().toLowerCase()
+    if (q) {
+      rows = rows.filter((row) => {
+        const dish = (row.dishName || '').toLowerCase()
+        const customer = (row.customerName || '').toLowerCase()
+        const orderCode = row.orderId ? `#${String(row.orderId).slice(-6).toUpperCase()}`.toLowerCase() : ''
+        return dish.includes(q) || customer.includes(q) || orderCode.includes(q)
+      })
+    }
+
+    return rows
+  }, [orders, itemStatusById, filterStatus, searchText])
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
@@ -247,7 +262,7 @@ const OrderManagementContent = () => {
     {
       key: ORDER_ITEM_STATUS.confirmed,
       color: 'blue',
-      icon: <SyncOutlined spin />,
+      icon: <SyncOutlined />,
       label: ORDER_ITEM_STATUS_MAP[ORDER_ITEM_STATUS.confirmed]?.label || 'Đã xác nhận',
       count: countStatus(ORDER_ITEM_STATUS.confirmed),
     },
@@ -287,29 +302,50 @@ const OrderManagementContent = () => {
 
         <section className="gap-2 flex items-center mb-4 flex-wrap">
           <Tag
-            color={!filterStatus ? "blue" : "default"}
-            className="cursor-pointer py-1 px-3 rounded-md border-none"
-            style={{ fontSize: '14px', fontWeight: !filterStatus ? 'bold' : 'normal' }}
-            onClick={() => setFilterStatus(null)}
+            color={"default"}
+            style={{ fontSize: '14px'}}
+            variant='solid'
           >
-            Tất cả: {flattenOrdersToItemRows(orders, itemStatusById).length}
+            Tất cả: <span className='font-semibold'>{flattenOrdersToItemRows(orders, itemStatusById).length}</span>
           </Tag>
 
           {STATUS_TAGS.map((t) => {
-            const isActive = filterStatus === t.key;
             return (
               <Tag
                 key={t.key}
-                color={isActive ? t.color : "default"}
+                color={t.color}
                 icon={t.icon}
-                className={`cursor-pointer py-1 px-3 rounded-md transition-all ${isActive ? 'scale-105 shadow-sm' : 'opacity-70'}`}
+                variant='solid'
+                className={`py-1 px-3`}
                 style={{ fontSize: '14px' }}
-                onClick={() => setFilterStatus(isActive ? null : t.key)}
               >
-                {t.label}: {t.count}
+                {t.label}: <span className='font-semibold'>{t.count}</span>
               </Tag>
             )
           })}
+        </section>
+
+        <section className="flex items-center gap-4">
+          <div style={{ marginBottom: 12 }} className="flex items-center gap-2">
+            <div className='font-semibold w-22'>Tìm kiếm:</div>
+            <Search
+              placeholder="Tìm kiếm..."
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              style={{ maxWidth: 300 }}
+            />
+          </div>
+          <div style={{ marginBottom: 12 }} className="flex items-center gap-2">
+            <div className='font-semibold'>Trạng thái:</div>
+            <Select
+              placeholder="Lọc theo trạng thái"
+              value={filterStatus}
+              options={ORDER_ITEM_STATUS_OPTIONS}
+              allowClear
+              onChange={(value) => setFilterStatus(value ?? null)}
+              style={{ minWidth: 220 }}
+            />
+          </div>
         </section>
 
         <Table

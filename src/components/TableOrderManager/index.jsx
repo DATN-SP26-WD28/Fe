@@ -1,6 +1,6 @@
-import { AlarmClockCheck, CheckCheck, ClipboardCheck, CookingPot, Users, ArrowLeftRight, Wallet } from 'lucide-react'
+import { ClipboardCheck, CookingPot, Users, ArrowLeftRight, Wallet, Clock, Check } from 'lucide-react'
 import React, { useEffect, useMemo, useState } from 'react'
-import { Empty, Modal, Spin, Tag, Button, Divider, message, Popconfirm, Select, Table } from 'antd'
+import { Empty, Modal, Spin, Tag, Button, Divider, message, Popconfirm, Select, Table, Tooltip } from 'antd'
 import { fetchTables } from '@/configs/table.api'
 import orderAPI from '@/configs/order.api'
 import paymentAPI from '@/configs/payment.api'
@@ -188,19 +188,19 @@ const TableOrderManager = ({ refreshData }) => {
             <div key={table._id} role='button' onClick={() => openTableModal(table)}
               className={`text-sm flex items-stretch gap-2 border p-2 rounded-md min-w-24 min-h-24 cursor-pointer transition-all ${isOccupied ? 'border-orange-400 bg-orange-50 shadow-sm' : 'border-gray-300 hover:border-blue-400'}`}>
               <section className='flex flex-col items-center justify-center gap-2 min-w-12.5'>
-                <div className='font-bold text-center text-lg'>{table.table_number}</div>
+                <div className='font-bold text-center text-2xl'>B{table.table_number}</div>
                 <div className='flex items-center gap-1 text-gray-500'><Users size={14} /><span>{table.capacity || 0}</span></div>
               </section>
               <div className='shrink-0 w-px grow h-auto bg-gray-200'></div>
               {!isOccupied ? (
                 <section className='flex flex-col items-center justify-center gap-1 grow text-gray-400 min-w-12.5'>
-                  <ClipboardCheck size={20} /><span className='text-[10px] uppercase font-bold'>Trống</span>
+                  <Tooltip title="Trống"><ClipboardCheck size={20} /></Tooltip><span className='text-sm'>Trống</span>
                 </section>
               ) : (
-                <section className='flex flex-col justify-center gap-1 grow'>
-                  <div className='flex items-center text-orange-600'><AlarmClockCheck size={14} /><span className='ml-2 font-bold text-xs'>{stats.pending}</span></div>
-                  <div className='flex items-center text-blue-600'><CookingPot size={14} /><span className='ml-2 font-bold text-xs'>{stats.preparing}</span></div>
-                  <div className='flex items-center text-green-600'><CheckCheck size={14} /><span className='ml-2 font-bold text-xs'>{stats.served}</span></div>
+                <section className='flex flex-col justify-center gap-1 grow min-w-12.5'>
+                  <div className='flex items-center justify-between text-orange-600'><Tooltip title="Đang chờ"><Clock size={18} /></Tooltip><span className='ml-2 font-bold text-lg'>{stats.pending}</span></div>
+                  <div className='flex items-center justify-between text-blue-600'><Tooltip title="Đang chuẩn bị"><CookingPot size={18} /></Tooltip><span className='ml-2 font-bold text-lg'>{stats.preparing}</span></div>
+                  <div className='flex items-center justify-between text-green-600'><Tooltip title="Đã phục vụ"><Check size={18} /></Tooltip><span className='ml-2 font-bold text-lg'>{stats.served}</span></div>
                 </section>
               )}
             </div>
