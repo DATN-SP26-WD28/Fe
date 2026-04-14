@@ -1,4 +1,4 @@
-import { ClipboardCheck, CookingPot, Users, ArrowLeftRight, Wallet, Clock, Check, ChefHat, Printer } from 'lucide-react'
+import { ClipboardCheck, CookingPot, Users, ArrowLeftRight, Wallet, Clock, Check, ChefHat, Printer, ArrowDownUp } from 'lucide-react'
 import React, { useEffect, useMemo, useState } from 'react'
 import { Empty, Modal, Spin, Tag, Button, Divider, message, Popconfirm, Select, Table, Tooltip } from 'antd'
 import { fetchTables } from '@/configs/table.api'
@@ -282,9 +282,11 @@ const TableOrderManager = ({ refreshData }) => {
         )}
       </Modal>
 
-      <Modal title={<b>Chuyển từ bàn {selectedTable?.table_number} sang bàn...</b>} open={isSwitchModalOpen} onOk={handleSwitchTable} onCancel={() => setIsSwitchModalOpen(false)} confirmLoading={submitting} okText="Xác nhận chuyển" destroyOnClose>
+      <Modal title={<b>Chuyển bàn</b>} open={isSwitchModalOpen} onOk={handleSwitchTable} onCancel={() => setIsSwitchModalOpen(false)} confirmLoading={submitting} okText="Xác nhận chuyển" destroyOnClose cancelText="Hủy bỏ" centered>
         <div className="py-4">
-          <p className="text-gray-500 mb-2 italic">Chỉ hiển thị các bàn đang trống hoàn toàn:</p>
+          <div className='text-xl font-semibold'>Bàn hiện tại: <b>{selectedTable?.table_number}</b></div>
+          <ArrowDownUp className='ml-6 my-4'/>
+          <div className='text-xl font-semibold mt-2 mb-1'>Bàn mới:</div>
           <Select placeholder="Chọn bàn mới" className="w-full" size="large" onChange={(val) => setTargetTableId(val)}
             options={tables.filter(t => t._id !== selectedTable?._id).filter(t => !(ordersByTable[String(t._id)]?.some(o => o.items?.length > 0))).map(t => ({ label: `Bàn số ${t.table_number} (Sức chứa: ${t.capacity})`, value: t._id }))}
           />
