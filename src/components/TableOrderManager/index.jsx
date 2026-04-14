@@ -223,7 +223,8 @@ const TableOrderManager = ({ refreshData }) => {
         })}
       </div>
 
-      <Modal open={open} width={700} onCancel={() => setOpen(false)}
+      <Modal open={open} width={800} onCancel={() => setOpen(false)}
+        bodyStyle={{ maxHeight: '70vh', overflowY: 'auto' }}
         title={selectedTable ? `Chi tiết đơn hàng - Bàn ${selectedTable.table_number}` : 'Chi tiết'}
         footer={[
           <Button key="close" onClick={() => setOpen(false)}>Đóng</Button>,
@@ -238,6 +239,7 @@ const TableOrderManager = ({ refreshData }) => {
             </Popconfirm>
           )
         ]}
+        centered
       >
         {modalLoading ? <div className='py-8 flex justify-center'><Spin /></div> : modalOrders.length === 0 ? <Empty description='Bàn trống' /> : (
           <div className='gap-4 overflow-y-auto pr-1'>
@@ -257,14 +259,14 @@ const TableOrderManager = ({ refreshData }) => {
                       <div className='text-gray-800'>Cập nhật: <span className='font-semibold'>{new Date(order.updatedAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</span></div>
                       <div className='text-gray-800'>Tổng đơn đã phục vụ: <span className='font-bold text-orange-500'>{payableItems.reduce((s, i) => s + (i.price * i.quantity), 0).toLocaleString()}đ</span></div>
                     </div>
-                            <div className='space-y-3'>
-                              {(() => {
-                                const confirmedItems = (order.items || []).filter(i => normalizeOrderStatus(itemStatusById[i._id] || i.status) === ORDER_ITEM_STATUS.confirmed)
-                                return (
-                                  <Button type="primary" disabled={confirmedItems.length === 0} onClick={() => handleOpenTicketPreview(order, confirmedItems)}><ChefHat size={16} />Phiếu gọi món</Button>
-                                )
-                              })()}
-                            </div>
+                    <div className='space-y-3'>
+                      {(() => {
+                        const confirmedItems = (order.items || []).filter(i => normalizeOrderStatus(itemStatusById[i._id] || i.status) === ORDER_ITEM_STATUS.confirmed)
+                        return (
+                          <Button type="primary" disabled={confirmedItems.length === 0} onClick={() => handleOpenTicketPreview(order, confirmedItems)}><ChefHat size={16} />Phiếu gọi món</Button>
+                        )
+                      })()}
+                    </div>
                   </section>
                   <section>
                     <Divider>Danh sách món ăn đã gọi</Divider>
@@ -282,10 +284,12 @@ const TableOrderManager = ({ refreshData }) => {
         )}
       </Modal>
 
-      <Modal title={<b>Chuyển bàn</b>} open={isSwitchModalOpen} onOk={handleSwitchTable} onCancel={() => setIsSwitchModalOpen(false)} confirmLoading={submitting} okText="Xác nhận chuyển" destroyOnClose cancelText="Hủy bỏ" centered>
+      <Modal title={<b>Chuyển bàn</b>} open={isSwitchModalOpen} onOk={handleSwitchTable} onCancel={() => setIsSwitchModalOpen(false)} confirmLoading={submitting} okText="Xác nhận chuyển" destroyOnClose cancelText="Hủy bỏ" centered
+        bodyStyle={{ maxHeight: '50vh', overflowY: 'auto' }}
+      >
         <div className="py-4">
           <div className='text-xl font-semibold'>Bàn hiện tại: <b>{selectedTable?.table_number}</b></div>
-          <ArrowDownUp className='ml-6 my-4'/>
+          <ArrowDownUp className='ml-6 my-4' />
           <div className='text-xl font-semibold mt-2 mb-1'>Bàn mới:</div>
           <Select placeholder="Chọn bàn mới" className="w-full" size="large" onChange={(val) => setTargetTableId(val)}
             options={tables.filter(t => t._id !== selectedTable?._id).filter(t => !(ordersByTable[String(t._id)]?.some(o => o.items?.length > 0))).map(t => ({ label: `Bàn số ${t.table_number} (Sức chứa: ${t.capacity})`, value: t._id }))}
@@ -302,15 +306,16 @@ const TableOrderManager = ({ refreshData }) => {
           <Button key="submit" type="primary" onClick={handlePrintTicket}><Printer size={16} /> In phiếu gọi món</Button>,
         ]}
         width={450}
+        bodyStyle={{ maxHeight: '60vh', overflowY: 'auto' }}
         centered
       >
         {currentPrintOrder && (
           <KitchenTicket
             tableNumber={selectedTable?.table_number}
             orderId={currentPrintOrder._id}
-            orderTime={new Date(currentPrintOrder.createdAt).toLocaleString('vi-VN', { 
-              day: '2-digit', month: '2-digit', year: 'numeric', 
-              hour: '2-digit', minute: '2-digit' 
+            orderTime={new Date(currentPrintOrder.createdAt).toLocaleString('vi-VN', {
+              day: '2-digit', month: '2-digit', year: 'numeric',
+              hour: '2-digit', minute: '2-digit'
             })}
             items={currentPrintOrderConfirmedItems}
             guestName={currentPrintOrder.guest_id?.username || 'Khách vãng lai'}

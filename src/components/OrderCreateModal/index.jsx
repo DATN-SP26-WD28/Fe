@@ -221,7 +221,7 @@ const OrderCreateModal = ({ open, onCancel, onSuccess }) => {
               key={item.dish_id}
               className='border border-gray-200 rounded-lg p-3 flex items-center justify-between gap-3 mb-4 bg-orange-50'
             >
-              <div>
+              <div className='flex items-center'>
                 <img
                   src={item.image_url}
                   alt={item.dish_name}
