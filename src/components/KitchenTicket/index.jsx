@@ -12,30 +12,23 @@ const KitchenTicket = ({ tableNumber, orderId, orderTime, items, guestName = '-'
           Bàn {tableNumber} - <span className="uppercase font-normal">#{orderId?.slice(-8).toUpperCase()}</span>
         </h2>
       </div>
-
       {/* Perforation Line */}
       <div className="border-t border-dashed border-black my-4 w-full h-0"></div>
-
+      <h1 className="text-2xl font-black uppercase tracking-[0.1em] my-2 text-center">
+        Phiếu gọi món
+      </h1>
       {/* Info Section */}
       <div className="text-sm space-y-1 mb-6 divide-dashed">
-        <div className="flex gap-2">
-          <span className="text-gray-500 uppercase">Khách hàng:</span>
+        <div className="flex gap-2 items-center justify-between">
           <span className="font-bold">{guestName}</span>
-        </div>
-        <div className="flex gap-2">
-          <span className="text-gray-500 uppercase">Ngày:</span>
           <span>{orderTime}</span>
         </div>
-      </div>
 
+      </div>
       {/* Items Table */}
       <table className="w-full">
         <thead>
-          <tr className="border-y-2 border-black">
-            <h1 className="text-2xl font-black uppercase tracking-[0.1em] my-2 text-center">
-              Phiếu gọi món
-            </h1>
-          </tr>
+          <tr className="border-y-2 border-black"></tr>
         </thead>
         <tbody>
           {(items || []).map((item, index) => (

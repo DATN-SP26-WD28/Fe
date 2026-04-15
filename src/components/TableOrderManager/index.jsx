@@ -1,15 +1,16 @@
-import { ClipboardCheck, CookingPot, Users, ArrowLeftRight, Wallet, Clock, Check, ChefHat, Printer } from 'lucide-react'
+import { ClipboardCheck, CookingPot, Users, ArrowLeftRight, Wallet, Clock, Check, ChefHat, Printer, ArrowDownUp, ListChecks } from 'lucide-react'
 import React, { useEffect, useMemo, useState } from 'react'
 import { Empty, Modal, Spin, Tag, Button, Divider, message, Popconfirm, Select, Table, Tooltip } from 'antd'
 import { fetchTables } from '@/configs/table.api'
 import orderAPI from '@/configs/order.api'
+import orderItemAPI from '@/configs/orderItem.api'
 import paymentAPI from '@/configs/payment.api'
 import { useOrderStatus } from '@/contexts/OrderStatusContext'
 import { printElement } from '@/shared/utils/print'
 import KitchenTicket from '../KitchenTicket'
 import {
   ORDER_ITEM_STATUS,
-  ORDER_ITEM_STATUS_MAP,
+  ORDER_ITEM_STATUS_OPTIONS,
   ORDER_PREPARING_STATUSES,
   ORDER_SERVED_STATUSES,
   normalizeOrderStatus,
@@ -40,8 +41,9 @@ const aggregateItemStats = (orders = [], itemStatusById = {}) => {
 }
 
 const TableOrderManager = ({ refreshData }) => {
-  const { orders, itemStatusById, refreshOrders } = useOrderStatus() // Thêm refreshOrders từ context
+  const { orders, itemStatusById, refreshOrders, applyItemStatusUpdate } = useOrderStatus()
   const [tables, setTables] = useState([])
+  const [updatingItemId, setUpdatingItemId] = useState(null)
   const [tableItemStats, setTableItemStats] = useState({})
   const [open, setOpen] = useState(false)
   const [selectedTable, setSelectedTable] = useState(null)
@@ -52,6 +54,7 @@ const TableOrderManager = ({ refreshData }) => {
   const [targetTableId, setTargetTableId] = useState(null)
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false)
   const [currentPrintOrder, setCurrentPrintOrder] = useState(null)
+  const [currentPrintOrderConfirmedItems, setCurrentPrintOrderConfirmedItems] = useState([])
 
   // LOGIC TÍNH TỔNG TIỀN QUAN TRỌNG: Chỉ tính các món 'served' (Đã phục vụ)
   const totalBill = useMemo(() => {
@@ -148,13 +151,88 @@ const TableOrderManager = ({ refreshData }) => {
     } catch { message.error("Lỗi khi chuyển bàn") } finally { setSubmitting(false) }
   }
 
-  const handleOpenTicketPreview = (order) => {
+  const handleOpenTicketPreview = (order, confirmedItems = []) => {
     setCurrentPrintOrder(order)
+    setCurrentPrintOrderConfirmedItems(Array.isArray(confirmedItems) ? confirmedItems : [])
     setIsTicketModalOpen(true)
   }
 
   const handlePrintTicket = () => {
     printElement('kitchen-ticket-content', `Phieu_Bep_Ban_${selectedTable?.table_number}`)
+  }
+
+  const handleUpdateStatus = async (itemId, nextStatus, currentStatus) => {
+    if (!itemId || nextStatus === currentStatus) return
+
+    if (currentStatus === ORDER_ITEM_STATUS.served || currentStatus === ORDER_ITEM_STATUS.canceled) {
+      return message.error('Món ăn đã kết thúc quy trình, không thể thay đổi!')
+    }
+
+    if (currentStatus === ORDER_ITEM_STATUS.confirmed && nextStatus === ORDER_ITEM_STATUS.pending) {
+      return message.warning('Món đã xác nhận không thể quay lại trạng thái chờ!')
+    }
+
+    setUpdatingItemId(itemId)
+    try {
+      await orderItemAPI.updateStatus(itemId, nextStatus)
+      applyItemStatusUpdate(itemId, nextStatus)
+    } catch {
+      message.error('Lỗi khi cập nhật trạng thái món!')
+    } finally {
+      setUpdatingItemId(null)
+    }
+  }
+
+  const hasPending = useMemo(() => {
+    if (!Array.isArray(modalOrders) || modalOrders.length === 0) return false
+    for (const order of modalOrders) {
+      const items = Array.isArray(order?.items) ? order.items : []
+      for (const item of items) {
+        const status = normalizeOrderStatus(itemStatusById[item?._id] || item?.status)
+        if (status === ORDER_ITEM_STATUS.pending) return true
+      }
+    }
+    return false
+  }, [modalOrders, itemStatusById])
+
+  const handleQuickConfirm = async () => {
+    if (!hasPending) return
+    setSubmitting(true)
+    try {
+      const pendingItemIds = modalOrders.flatMap((order) => (order.items || [])
+        .filter((i) => normalizeOrderStatus(itemStatusById[i._id] || i.status) === ORDER_ITEM_STATUS.pending)
+        .map((i) => i._id)
+      ).filter(Boolean)
+
+      if (!pendingItemIds.length) {
+        message.info('Không có món chờ xử lý')
+        setSubmitting(false)
+        return
+      }
+
+      await Promise.all(pendingItemIds.map((id) => orderItemAPI.updateStatus(id, ORDER_ITEM_STATUS.confirmed)))
+
+      // Update context and local modal state
+      pendingItemIds.forEach((id) => applyItemStatusUpdate(id, ORDER_ITEM_STATUS.confirmed))
+
+      setModalOrders((prev) => prev.map((order) => ({
+        ...order,
+        items: (order.items || []).map((item) => {
+          const norm = normalizeOrderStatus(itemStatusById[item._id] || item.status)
+          if (norm === ORDER_ITEM_STATUS.pending) return { ...item, status: ORDER_ITEM_STATUS.confirmed }
+          return item
+        })
+      })))
+
+      message.success(`Xác nhận nhanh ${pendingItemIds.length} món thành công`)
+      loadTables()
+      if (refreshOrders) refreshOrders()
+    } catch (err) {
+      console.error(err)
+      message.error('Lỗi khi xác nhận nhanh')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const columns = [
@@ -179,8 +257,17 @@ const TableOrderManager = ({ refreshData }) => {
       key: 'status',
       render: (text, record) => {
         const status = normalizeOrderStatus(itemStatusById?.[record?._id] || record?.status || text)
-        const map = ORDER_ITEM_STATUS_MAP[status] || { color: 'default', label: status }
-        return <Tag color={map.color}>{map.label}</Tag>
+        const isLocked = status === ORDER_ITEM_STATUS.served || status === ORDER_ITEM_STATUS.canceled
+        return (
+          <Select
+            value={status}
+            options={ORDER_ITEM_STATUS_OPTIONS}
+            loading={updatingItemId === record._id}
+            onChange={(value) => handleUpdateStatus(record._id, value, status)}
+            style={{ minWidth: 150 }}
+            disabled={isLocked}
+          />
+        )
       }
     },
     {
@@ -221,21 +308,41 @@ const TableOrderManager = ({ refreshData }) => {
         })}
       </div>
 
-      <Modal open={open} width={700} onCancel={() => setOpen(false)}
+      <Modal open={open} width={800} onCancel={() => setOpen(false)}
+        bodyStyle={{ maxHeight: '70vh', overflowY: 'auto' }}
         title={selectedTable ? `Chi tiết đơn hàng - Bàn ${selectedTable.table_number}` : 'Chi tiết'}
-        footer={[
-          <Button key="close" onClick={() => setOpen(false)}>Đóng</Button>,
-          modalOrders.length > 0 && (
-            <Button key="switch" icon={<ArrowLeftRight size={16} />} onClick={() => setIsSwitchModalOpen(true)} className="border-blue-500 text-blue-500">
-              Chuyển bàn
-            </Button>
-          ),
-          modalOrders.length > 0 && (
-            <Popconfirm key="pay" title={`Thanh toán ${totalBill.toLocaleString()}đ cho món đã phục vụ?`} onConfirm={handleCounterPayment}>
-              <Button type="primary"><Wallet size={16} /> Thanh toán</Button>
-            </Popconfirm>
-          )
-        ]}
+        footer={
+          <div className="w-full flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {modalOrders.length > 0 && (
+                <Button key="switch" icon={<ArrowLeftRight size={16} />} onClick={() => setIsSwitchModalOpen(true)} className="border-blue-500 text-blue-500">
+                  Chuyển bàn
+                </Button>
+              )}
+
+              {modalOrders.length > 0 && (
+                <Popconfirm key="pay" title={`Thanh toán ${totalBill.toLocaleString()}đ cho món đã phục vụ?`} onConfirm={handleCounterPayment}>
+                  <Button type="primary"><Wallet size={16} /> Thanh toán</Button>
+                </Popconfirm>
+              )}
+            </div>
+
+            <div>
+              <Popconfirm
+                title="Xác nhận những đơn hàng đang chờ?"
+                onConfirm={handleQuickConfirm}
+                okText="Xác nhận"
+                cancelText="Hủy"
+                disabled={!hasPending}
+              >
+                <Button icon={<ListChecks size={16} />} loading={submitting} disabled={!hasPending}>
+                  Xác nhận nhanh
+                </Button>
+              </Popconfirm>
+            </div>
+          </div>
+        }
+        centered
       >
         {modalLoading ? <div className='py-8 flex justify-center'><Spin /></div> : modalOrders.length === 0 ? <Empty description='Bàn trống' /> : (
           <div className='gap-4 overflow-y-auto pr-1'>
@@ -256,7 +363,12 @@ const TableOrderManager = ({ refreshData }) => {
                       <div className='text-gray-800'>Tổng đơn đã phục vụ: <span className='font-bold text-orange-500'>{payableItems.reduce((s, i) => s + (i.price * i.quantity), 0).toLocaleString()}đ</span></div>
                     </div>
                     <div className='space-y-3'>
-                      <Button type="primary" onClick={() => handleOpenTicketPreview(order)}><ChefHat size={16} />Phiếu gọi món</Button>
+                      {(() => {
+                        const confirmedItems = (order.items || []).filter(i => normalizeOrderStatus(itemStatusById[i._id] || i.status) === ORDER_ITEM_STATUS.confirmed)
+                        return (
+                          <Button type="primary" disabled={confirmedItems.length === 0} onClick={() => handleOpenTicketPreview(order, confirmedItems)}><ChefHat size={16} />Phiếu gọi món</Button>
+                        )
+                      })()}
                     </div>
                   </section>
                   <section>
@@ -275,9 +387,13 @@ const TableOrderManager = ({ refreshData }) => {
         )}
       </Modal>
 
-      <Modal title={<b>Chuyển từ bàn {selectedTable?.table_number} sang bàn...</b>} open={isSwitchModalOpen} onOk={handleSwitchTable} onCancel={() => setIsSwitchModalOpen(false)} confirmLoading={submitting} okText="Xác nhận chuyển" destroyOnClose>
+      <Modal title={<b>Chuyển bàn</b>} open={isSwitchModalOpen} onOk={handleSwitchTable} onCancel={() => setIsSwitchModalOpen(false)} confirmLoading={submitting} okText="Xác nhận chuyển" destroyOnClose cancelText="Hủy bỏ" centered
+        bodyStyle={{ maxHeight: '50vh', overflowY: 'auto' }}
+      >
         <div className="py-4">
-          <p className="text-gray-500 mb-2 italic">Chỉ hiển thị các bàn đang trống hoàn toàn:</p>
+          <div className='text-xl font-semibold'>Bàn hiện tại: <b>{selectedTable?.table_number}</b></div>
+          <ArrowDownUp className='ml-6 my-4' />
+          <div className='text-xl font-semibold mt-2 mb-1'>Bàn mới:</div>
           <Select placeholder="Chọn bàn mới" className="w-full" size="large" onChange={(val) => setTargetTableId(val)}
             options={tables.filter(t => t._id !== selectedTable?._id).filter(t => !(ordersByTable[String(t._id)]?.some(o => o.items?.length > 0))).map(t => ({ label: `Bàn số ${t.table_number} (Sức chứa: ${t.capacity})`, value: t._id }))}
           />
@@ -293,17 +409,18 @@ const TableOrderManager = ({ refreshData }) => {
           <Button key="submit" type="primary" onClick={handlePrintTicket}><Printer size={16} /> In phiếu gọi món</Button>,
         ]}
         width={450}
+        bodyStyle={{ maxHeight: '60vh', overflowY: 'auto' }}
         centered
       >
         {currentPrintOrder && (
           <KitchenTicket
             tableNumber={selectedTable?.table_number}
             orderId={currentPrintOrder._id}
-            orderTime={new Date(currentPrintOrder.createdAt).toLocaleString('vi-VN', { 
-              day: '2-digit', month: '2-digit', year: 'numeric', 
-              hour: '2-digit', minute: '2-digit' 
+            orderTime={new Date(currentPrintOrder.createdAt).toLocaleString('vi-VN', {
+              day: '2-digit', month: '2-digit', year: 'numeric',
+              hour: '2-digit', minute: '2-digit'
             })}
-            items={currentPrintOrder.items}
+            items={currentPrintOrderConfirmedItems}
             guestName={currentPrintOrder.guest_id?.username || 'Khách vãng lai'}
           />
         )}

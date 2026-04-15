@@ -14,6 +14,7 @@ import {
 import { CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, SyncOutlined } from '@ant-design/icons'
 import { App, Breadcrumb, Button, Card, Select, Table, Tag, message, notification, Input } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ShoppingBasket } from 'lucide-react'
 
 // --- CÁC HÀM HELPER GIỮ NGUYÊN ---
 // const getTableIdFromOrder = (order) => {
@@ -285,13 +286,13 @@ const OrderManagementContent = () => {
   return (
     <>
       {notificationContextHolder}
-      <section className="flex justify-between items-end mb-2">
+      <section className="flex justify-between items-center mb-2">
         <section className="mb-3">
           <h1 className="font-bold text-3xl mb-2">Quản lý đơn hàng</h1>
           <Breadcrumb items={[{ title: 'Trang chủ' }, { title: 'Quản lý đơn hàng' }]} />
         </section>
         <Button type="primary" onClick={() => setIsCreateModalOpen(true)}>
-          Tạo đơn hàng
+          <ShoppingBasket size={16}/> Tạo đơn hàng
         </Button>
       </section>
 
@@ -303,8 +304,7 @@ const OrderManagementContent = () => {
         <section className="gap-2 flex items-center mb-4 flex-wrap">
           <Tag
             color={"default"}
-            style={{ fontSize: '14px'}}
-            variant='solid'
+            style={{ fontSize: '14px' }}
           >
             Tất cả: <span className='font-semibold'>{flattenOrdersToItemRows(orders, itemStatusById).length}</span>
           </Tag>
@@ -315,7 +315,6 @@ const OrderManagementContent = () => {
                 key={t.key}
                 color={t.color}
                 icon={t.icon}
-                variant='solid'
                 className={`py-1 px-3`}
                 style={{ fontSize: '14px' }}
               >
