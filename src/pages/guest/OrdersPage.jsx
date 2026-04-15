@@ -89,24 +89,43 @@ const OrdersPage = () => {
   }, [fetchOrders])
 
   // --- ĐỒNG NHẤT LOGIC SOCKET THANH TOÁN ---
-  useEffect(() => {
-    if (!socket) return;
-    const onPaymentSuccess = (payload) => {
-      console.log("🚀 Socket nhận tín hiệu:", payload);
-      // ĐỒNG NHẤT: Ép kiểu cả 2 về String để đảm bảo "1" === "1"
-      if (String(payload.tableId) === String(tableId)) {
-        notificationApi.success({
-          message: 'Thanh toán hoàn tất',
-          description: 'Hệ thống đã xác nhận thanh toán tự động!',
-        });
-        setIsPayModalOpen(false);
-        setShowSepayQR(false);
-        fetchOrders();
-      }
-    };
-    socket.on('payment_success', onPaymentSuccess);
-    return () => socket.off('payment_success', onPaymentSuccess);
-  }, [socket, tableId, fetchOrders, notificationApi]);
+useEffect(() => {
+  if (!socket) return;
+
+  const onPaymentSuccess = (payload) => {
+    console.log("🚀 Socket nhận tín hiệu thanh toán:", payload);
+
+    // Đảm bảo so sánh chính xác giữa payload từ server và tableId hiện tại
+    const incomingTableId = String(payload.tableId || payload.table_id);
+    const currentTableId = String(tableId);
+
+    if (incomingTableId === currentTableId) {
+      // 1. Thông báo thành công ngay lập tức
+      notificationApi.success({
+        message: 'Thanh toán thành công!',
+        description: 'Hệ thống đã nhận được tiền. Cảm ơn quý khách!',
+        placement: 'top', // Đưa lên top để dễ nhìn
+        duration: 5,
+      });
+
+      // 2. Đóng tất cả các Modal và trạng thái chờ
+      setIsPayModalOpen(false);
+      setShowSepayQR(false);
+
+      // 3. Cập nhật lại dữ liệu đơn hàng (để hiển thị trạng thái đã thanh toán hoặc trống)
+      fetchOrders();
+      
+      // 4. Tùy chọn: Chuyển hướng sau vài giây nếu muốn
+      // setTimeout(() => navigate(`/table-order/${tableId}/thanks`), 3000);
+    }
+  };
+
+  socket.on('payment_success', onPaymentSuccess);
+  
+  return () => {
+    socket.off('payment_success', onPaymentSuccess);
+  };
+}, [socket, tableId, fetchOrders, notificationApi]);
 
   // --- POLLING DỰ PHÒNG (ĐẢM BẢO 100% THÀNH CÔNG DÙ SOCKET LAG) ---
   useEffect(() => {
@@ -267,14 +286,6 @@ const OrdersPage = () => {
                       <div className="flex items-center gap-4">
                         <QrcodeOutlined className="text-xl text-blue-600" />
                         <div><p className="font-bold text-slate-900">VietQR (Tự động)</p><p className="text-xs text-slate-500">Xác nhận thanh toán ngay lập tức</p></div>
-                      </div>
-                    </Radio>
-                  </div>
-                  <div className={`rounded-xl border-2 p-4 cursor-pointer transition-all ${paymentMethod === 'vnpay' ? 'border-orange-500 bg-orange-50' : 'border-slate-200 hover:border-slate-300'}`}>
-                    <Radio value="vnpay" className="w-full">
-                      <div className="flex items-center gap-4">
-                        <CreditCardOutlined className="text-xl text-blue-600" />
-                        <div><p className="font-bold text-slate-900">VNPAY</p><p className="text-xs text-slate-500">Ngân hàng, Ví điện tử, QR Code</p></div>
                       </div>
                     </Radio>
                   </div>
