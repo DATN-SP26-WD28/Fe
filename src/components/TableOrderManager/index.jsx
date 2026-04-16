@@ -145,9 +145,10 @@ const TableOrderManager = ({ refreshData }) => {
       message.success(`Đã chuyển bàn thành công!`)
       setIsSwitchModalOpen(false)
       setOpen(false)
-      loadTables()
+      // Ensure orders context is refreshed first so UI reflects new table assignments
+      if (typeof refreshOrders === 'function') await refreshOrders()
+      await loadTables()
       if (refreshData) refreshData()
-      if (refreshOrders) refreshOrders()
     } catch { message.error("Lỗi khi chuyển bàn") } finally { setSubmitting(false) }
   }
 

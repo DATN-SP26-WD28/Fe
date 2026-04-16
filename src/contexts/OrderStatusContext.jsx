@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react'
 import { normalizeOrderStatus } from '@/shared/constants/app.constants'
+import orderAPI from '@/configs/order.api'
 
 const OrderStatusContext = createContext(null)
 
@@ -24,6 +25,25 @@ export const OrderStatusProvider = ({ children }) => {
     setOrders(safeOrders)
     setItemStatusById(buildItemStatusMap(safeOrders))
   }, [])
+
+  const normalizeOrder = (order) => ({
+    ...order,
+    items: Array.isArray(order?.items) ? order.items : [],
+    key: order?._id,
+  })
+
+  const refreshOrders = useCallback(async () => {
+    try {
+      const res = await orderAPI.getAll()
+      const actualOrders = res?.data?.data || res?.data || []
+      if (Array.isArray(actualOrders)) {
+        const normalizedOrders = actualOrders.map((o) => normalizeOrder(o))
+        hydrateOrders(normalizedOrders)
+      }
+    } catch (err) {
+      console.error('refreshOrders error', err)
+    }
+  }, [hydrateOrders])
 
   const applyItemStatusUpdate = useCallback((itemId, nextStatus) => {
     if (!itemId) return
@@ -55,9 +75,10 @@ export const OrderStatusProvider = ({ children }) => {
       orders,
       itemStatusById,
       hydrateOrders,
+      refreshOrders,
       applyItemStatusUpdate,
     }),
-    [orders, itemStatusById, hydrateOrders, applyItemStatusUpdate],
+    [orders, itemStatusById, hydrateOrders, refreshOrders, applyItemStatusUpdate],
   )
 
   return <OrderStatusContext.Provider value={value}>{children}</OrderStatusContext.Provider>
