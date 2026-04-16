@@ -1,6 +1,6 @@
-import { ClipboardCheck, CookingPot, Users, ArrowLeftRight, Wallet, Clock, Check, ChefHat, Printer, ArrowDownUp, ListChecks } from 'lucide-react'
+import { ClipboardCheck, CookingPot, Users, ArrowLeftRight, Wallet, Clock, Check, ChefHat, Printer, ArrowDownUp, ListChecks, ConciergeBell } from 'lucide-react'
 import React, { useEffect, useMemo, useState } from 'react'
-import { Empty, Modal, Spin, Tag, Button, Divider, message, Popconfirm, Select, Table, Tooltip } from 'antd'
+import { Empty, Modal, Spin, Tag, Button, Divider, message, Popconfirm, Select, Table, Tooltip, Radio } from 'antd'
 import { fetchTables } from '@/configs/table.api'
 import orderAPI from '@/configs/order.api'
 import orderItemAPI from '@/configs/orderItem.api'
@@ -195,6 +195,57 @@ const TableOrderManager = ({ refreshData }) => {
     return false
   }, [modalOrders, itemStatusById])
 
+  const hasConfirmed = useMemo(() => {
+    if (!Array.isArray(modalOrders) || modalOrders.length === 0) return false
+    for (const order of modalOrders) {
+      const items = Array.isArray(order?.items) ? order.items : []
+      for (const item of items) {
+        const status = normalizeOrderStatus(itemStatusById[item?._id] || item?.status)
+        if (status === ORDER_ITEM_STATUS.confirmed) return true
+      }
+    }
+    return false
+  }, [modalOrders, itemStatusById])
+
+  const handleQuickServe = async () => {
+    if (!hasConfirmed) return
+    setSubmitting(true)
+    try {
+      const confirmedItemIds = modalOrders.flatMap((order) => (order.items || [])
+        .filter((i) => normalizeOrderStatus(itemStatusById[i._id] || i.status) === ORDER_ITEM_STATUS.confirmed)
+        .map((i) => i._id)
+      ).filter(Boolean)
+
+      if (!confirmedItemIds.length) {
+        message.info('Không có món đã xác nhận')
+        setSubmitting(false)
+        return
+      }
+
+      await Promise.all(confirmedItemIds.map((id) => orderItemAPI.updateStatus(id, ORDER_ITEM_STATUS.served)))
+
+      confirmedItemIds.forEach((id) => applyItemStatusUpdate(id, ORDER_ITEM_STATUS.served))
+
+      setModalOrders((prev) => prev.map((order) => ({
+        ...order,
+        items: (order.items || []).map((item) => {
+          const norm = normalizeOrderStatus(itemStatusById[item._id] || item.status)
+          if (norm === ORDER_ITEM_STATUS.confirmed) return { ...item, status: ORDER_ITEM_STATUS.served }
+          return item
+        })
+      })))
+
+      message.success(`Phục vụ nhanh ${confirmedItemIds.length} món thành công`)
+      loadTables()
+      if (refreshOrders) refreshOrders()
+    } catch (err) {
+      console.error(err)
+      message.error('Lỗi khi phục vụ nhanh')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   const handleQuickConfirm = async () => {
     if (!hasPending) return
     setSubmitting(true)
@@ -285,8 +336,13 @@ const TableOrderManager = ({ refreshData }) => {
           const isOccupied = tableOrders.some(order => order.items?.length > 0)
           const stats = tableItemStats[String(table._id)] || { pending: 0, preparing: 0, served: 0 }
           return (
-            <div key={table._id} role='button' onClick={() => openTableModal(table)}
-              className={`text-sm flex items-stretch gap-2 border p-2 rounded-md min-w-24 min-h-24 cursor-pointer transition-all ${isOccupied ? 'border-orange-400 bg-orange-50 shadow-sm' : 'border-gray-300 hover:border-blue-400'}`}>
+            <div
+              key={table._id}
+              role='button'
+              onClick={isOccupied ? () => openTableModal(table) : undefined}
+              aria-disabled={!isOccupied}
+              className={`text-sm flex items-stretch gap-2 border p-2 rounded-md min-w-24 min-h-24 ${isOccupied ? 'cursor-pointer transition-all border-orange-400 bg-orange-50 shadow-sm' : 'cursor-not-allowed opacity-70 border-gray-300 '}`}
+            >
               <section className='flex flex-col items-center justify-center gap-2 min-w-12.5'>
                 <div className='font-bold text-center text-2xl'>B{table.table_number}</div>
                 <div className='flex items-center gap-1 text-gray-500'><Users size={14} /><span>{table.capacity || 0}</span></div>
@@ -310,35 +366,52 @@ const TableOrderManager = ({ refreshData }) => {
 
       <Modal open={open} width={800} onCancel={() => setOpen(false)}
         bodyStyle={{ maxHeight: '70vh', overflowY: 'auto' }}
-        title={selectedTable ? `Chi tiết đơn hàng - Bàn ${selectedTable.table_number}` : 'Chi tiết'}
+        title={
+          <div className='flex items-center gap-4'>
+            {selectedTable ? `Chi tiết đơn hàng - Bàn ${selectedTable.table_number}` : 'Chi tiết'}
+            {modalOrders.length > 0 && (
+              <Button key="switch" icon={<ArrowLeftRight size={16} />} onClick={() => setIsSwitchModalOpen(true)} className="border-blue-500 text-blue-500">
+                Chuyển bàn
+              </Button>
+            )}
+          </div>
+        }
         footer={
           <div className="w-full flex items-center justify-between">
             <div className="flex items-center gap-2">
-              {modalOrders.length > 0 && (
-                <Button key="switch" icon={<ArrowLeftRight size={16} />} onClick={() => setIsSwitchModalOpen(true)} className="border-blue-500 text-blue-500">
-                  Chuyển bàn
-                </Button>
-              )}
+              <div className="text-slate-700 font-semibold">Thao tác hàng loạt:</div>
+              <Radio.Group>
+                <Popconfirm
+                  title="Xác nhận những đơn hàng đang chờ?"
+                  onConfirm={handleQuickConfirm}
+                  okText="Xác nhận"
+                  cancelText="Hủy"
+                  disabled={!hasPending}
+                >
+                  <Radio.Button value="confirm" disabled={!hasPending || submitting}>
+                    <ListChecks size={14} className="inline mr-1 -mt-0.5" />Xác nhận
+                  </Radio.Button>
+                </Popconfirm>
+                <Popconfirm
+                  title="Chuyển tất cả món đã xác nhận sang Đã phục vụ?"
+                  onConfirm={handleQuickServe}
+                  okText="Xác nhận"
+                  cancelText="Hủy"
+                  disabled={!hasConfirmed}
+                >
+                  <Radio.Button value="serve" disabled={!hasConfirmed || submitting}>
+                    <ConciergeBell size={14} className="inline mr-1 -mt-0.5" />Phục vụ
+                  </Radio.Button>
+                </Popconfirm>
+              </Radio.Group>
+            </div>
 
+            <div>
               {modalOrders.length > 0 && (
                 <Popconfirm key="pay" title={`Thanh toán ${totalBill.toLocaleString()}đ cho món đã phục vụ?`} onConfirm={handleCounterPayment}>
                   <Button type="primary"><Wallet size={16} /> Thanh toán</Button>
                 </Popconfirm>
               )}
-            </div>
-
-            <div>
-              <Popconfirm
-                title="Xác nhận những đơn hàng đang chờ?"
-                onConfirm={handleQuickConfirm}
-                okText="Xác nhận"
-                cancelText="Hủy"
-                disabled={!hasPending}
-              >
-                <Button icon={<ListChecks size={16} />} loading={submitting} disabled={!hasPending}>
-                  Xác nhận nhanh
-                </Button>
-              </Popconfirm>
             </div>
           </div>
         }
@@ -349,7 +422,6 @@ const TableOrderManager = ({ refreshData }) => {
             {modalOrders.map((order) => {
               const codeTail = String(order?._id || '').toUpperCase();
               const payableItems = (order.items || []).filter(i => normalizeOrderStatus(itemStatusById[i._id] || i.status) === 'served' || i.status === 'Đã phục vụ');
-              {/* const otherItems = (order.items || []).filter(i => !payableItems.includes(i)); */ }
               const dataSource = order?.items ?? [];
 
               return (
@@ -357,24 +429,22 @@ const TableOrderManager = ({ refreshData }) => {
                   <section className='flex items-start justify-between'>
                     <div className='flex flex-col gap-1.5 mb-3'>
                       <div className='text-gray-800'>Mã đơn:  <Tag color="blue" className="rounded-full px-3 font-bold">#{codeTail}</Tag></div>
-                      <div className='text-gray-800'>Tên khách hàng: <span className='font-semibold'>{order?.guest_id?.username || 'Khách vãng lai'}</span></div>
-                      <div className='text-gray-800'>Thời gian đặt: <span className='font-semibold'>{new Date(order.createdAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</span></div>
-                      <div className='text-gray-800'>Cập nhật: <span className='font-semibold'>{new Date(order.updatedAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</span></div>
-                      <div className='text-gray-800'>Tổng đơn đã phục vụ: <span className='font-bold text-orange-500'>{payableItems.reduce((s, i) => s + (i.price * i.quantity), 0).toLocaleString()}đ</span></div>
+                      <div className='text-gray-800'>Khách hàng: <span className='font-semibold'>{order?.guest_id?.username || 'Khách vãng lai'}</span></div>
+                      <div className='text-gray-800'>TG đặt: <span className='font-semibold'>{new Date(order.createdAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</span> | Cập nhật: <span className='font-semibold'>{new Date(order.updatedAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</span></div>
                     </div>
                     <div className='space-y-3'>
                       {(() => {
                         const confirmedItems = (order.items || []).filter(i => normalizeOrderStatus(itemStatusById[i._id] || i.status) === ORDER_ITEM_STATUS.confirmed)
                         return (
-                          <Button type="primary" disabled={confirmedItems.length === 0} onClick={() => handleOpenTicketPreview(order, confirmedItems)}><ChefHat size={16} />Phiếu gọi món</Button>
+                          <Tooltip title="Xem trước phiếu bếp">
+                            <Button shape='circle' type='primary' disabled={confirmedItems.length === 0} onClick={() => handleOpenTicketPreview(order, confirmedItems)}><ChefHat size={16} /></Button>
+                          </Tooltip>
                         )
                       })()}
                     </div>
                   </section>
-                  <section>
-                    <Divider>Danh sách món ăn đã gọi</Divider>
-                    <Table dataSource={dataSource} columns={columns} pagination={false} />
-                  </section>
+                  <Divider>Danh sách món ăn đã gọi</Divider>
+                  <Table dataSource={dataSource} columns={columns} pagination={false} footer={() => <div className='text-gray-800 text-right'>Tổng đơn đã phục vụ: <span className='font-bold text-orange-500'>{payableItems.reduce((s, i) => s + (i.price * i.quantity), 0).toLocaleString()}đ</span></div>} />
                 </div>
               )
             })}
@@ -401,12 +471,11 @@ const TableOrderManager = ({ refreshData }) => {
       </Modal>
 
       <Modal
-        title={<b className='text-lg'>Xem trước phiếu gọi món</b>}
         destroyOnHidden
         open={isTicketModalOpen}
         onCancel={() => setIsTicketModalOpen(false)}
         footer={[
-          <Button key="submit" type="primary" onClick={handlePrintTicket}><Printer size={16} /> In phiếu gọi món</Button>,
+          <Button key="submit" type="primary" onClick={handlePrintTicket}><Printer size={16} /> In phiếu</Button>,
         ]}
         width={450}
         bodyStyle={{ maxHeight: '60vh', overflowY: 'auto' }}
