@@ -189,6 +189,7 @@ const OrderManagementContent = () => {
       title: 'Bàn số',
       dataIndex: 'tableNumber',
       key: 'table_number',
+      sorter: (a, b) => a.tableNumber - b.tableNumber,
       render: (v, record) => {
         const tableLabel = v || 'N/A'
         const orderCode = record?.orderId ? `#${String(record.orderId).slice(-6).toUpperCase()}` : 'N/A'
@@ -218,7 +219,7 @@ const OrderManagementContent = () => {
               <span className="font-medium text-slate-900 truncate">{record.dishName}</span>
               <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-md">x{record.quantity}</span>
             </div>
-            <div className="text-orange-600 italic font-semibold">{record.price.toLocaleString()} đ</div>
+            <div className="text-orange-600 font-semibold">{record.price.toLocaleString()} đ</div>
           </div>
         </div>
       ),
@@ -246,9 +247,10 @@ const OrderManagementContent = () => {
       },
     },
     {
-      title: 'Ghi chú',
+      title: 'Ghi chú (nếu có)',
       dataIndex: 'note',
       key: 'note',
+      render: (note) => note || <span className='text-sm text-slate-500 italic'>Không có ghi chú</span>,
     },
   ]
 

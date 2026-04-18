@@ -1,4 +1,4 @@
-/* eslint-disable react-refresh/only-export-components */
+ 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Spin, message, Modal, Radio, Space, Empty, Tag, notification } from 'antd'
@@ -6,7 +6,7 @@ import { CreditCardOutlined, WalletOutlined, ArrowLeftOutlined, PlusOutlined, Qr
 import orderAPI from '@/configs/order.api'
 import paymentAPI from '@/configs/payment.api'
 import { useSocket } from '@/contexts/SocketContext'
-import { ORDER_ITEM_STATUS_MAP, normalizeOrderStatus } from '@/shared/constants/app.constants'
+import { ORDER_ITEM_STATUS_MAP, ORDER_ITEM_STATUS, normalizeOrderStatus } from '@/shared/constants/app.constants'
 import { SOCKET_EVENTS } from '@/shared/constants/socket.constants'
 import { Dot } from 'lucide-react'
 
@@ -63,6 +63,29 @@ const OrdersPage = () => {
       return sum + (itemPrice * item.quantity)
     }, 0)
   }, [groupedItems])
+
+  // Only count money for items that are served; canceled items are excluded
+  const servedItems = useMemo(() => {
+    return flattenedItems.filter(item => normalizeOrderStatus(item.status || item.orderStatus) === ORDER_ITEM_STATUS.served)
+  }, [flattenedItems])
+
+  const servedTotalItems = useMemo(() => servedItems.reduce((sum, item) => sum + (item.quantity || 0), 0), [servedItems])
+
+  const servedGrandTotal = useMemo(() => {
+    return servedItems.reduce((sum, item) => {
+      const itemPrice = item.price || item.dish_id?.dish_price || 0
+      return sum + (itemPrice * item.quantity)
+    }, 0)
+  }, [servedItems])
+
+  // Determine whether payment is allowed: enabled only when ALL items are served or canceled
+  const canPay = useMemo(() => {
+    if (!flattenedItems || flattenedItems.length === 0) return false
+    return !flattenedItems.some(item => {
+      const status = normalizeOrderStatus(item.status || item.orderStatus)
+      return status === ORDER_ITEM_STATUS.pending || status === ORDER_ITEM_STATUS.confirmed
+    })
+  }, [flattenedItems])
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -177,7 +200,7 @@ useEffect(() => {
         setShowSepayQR(true);
         setProcessPaymentLoading(false);
       } else if (paymentMethod === 'vnpay') {
-        const res = await paymentAPI.createUrl({ table_id: tableId, amount: grandTotal })
+        const res = await paymentAPI.createUrl({ table_id: tableId, amount: servedGrandTotal })
         const url = res.data?.paymentUrl || res.paymentUrl
         if (url) {
           message.loading("Đang kết nối đến VNPay...", 1.5)
@@ -199,7 +222,7 @@ useEffect(() => {
   // --- GIỮ NGUYÊN LOGIC TẠO MÃ CỦA BẠN ---
   const orderCode = orders[0]?._id?.slice(-6).toUpperCase() || 'N/A'
   const paymentContent = `ROOSTA${orderCode !== 'N/A' ? orderCode : tableId}`
-  const qrCodeUrl = `https://qr.sepay.vn/img?acc=${SEPAY_BANK_ACCOUNT}&bank=${SEPAY_BANK_NAME}&amount=${grandTotal}&des=${paymentContent}&template=compact`
+  const qrCodeUrl = `https://qr.sepay.vn/img?acc=${SEPAY_BANK_ACCOUNT}&bank=${SEPAY_BANK_NAME}&amount=${servedGrandTotal}&des=${paymentContent}&template=compact`
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-50 to-slate-100"><Spin size="large" /></div>
 
@@ -239,7 +262,7 @@ useEffect(() => {
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-slate-900 text-sm">{item.dish_id?.dish_name}</p>
                         <span className="text-sm text-slate-600">Số lượng: {item.quantity}</span>
-                        <div className="mt-1"><Tag>{ORDER_ITEM_STATUS_MAP[normalizeOrderStatus(item.status)]?.label}</Tag></div>
+                        <div className="mt-1"><Tag color={ORDER_ITEM_STATUS_MAP[normalizeOrderStatus(item.status)]?.color}>{ORDER_ITEM_STATUS_MAP[normalizeOrderStatus(item.status)]?.label}</Tag></div>
                       </div>
                       <div className="text-right"><p className="font-semibold text-slate-900">{formatCurrency((item.price || item.dish_id?.dish_price || 0) * item.quantity)}</p></div>
                     </div>
@@ -249,7 +272,7 @@ useEffect(() => {
 
               <div className="rounded-2xl bg-orange-50 p-6 border border-orange-200 flex justify-between items-center shadow-sm">
                 <span className="text-lg font-bold text-slate-900">Tổng cộng</span>
-                <span className="text-2xl font-black text-orange-600">{formatCurrency(grandTotal)}</span>
+                <span className="text-2xl font-black text-orange-600">{formatCurrency(servedGrandTotal)}</span>
               </div>
             </>
           )}
@@ -258,9 +281,9 @@ useEffect(() => {
         {/* Action Bar */}
         {flattenedItems.length > 0 && (
           <div className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white/95 backdrop-blur-xl p-4 shadow-lg z-40">
-            <div className="mx-auto max-w-6xl flex gap-3">
+              <div className="mx-auto max-w-6xl flex gap-3">
               <button onClick={() => navigate(`/table-order/${tableId}/menu`)} className="flex-1 h-12 rounded-lg border border-slate-300 bg-white font-semibold text-slate-700 hover:bg-slate-50 transition-all">Gọi thêm món</button>
-              <button onClick={() => setIsPayModalOpen(true)} className="flex-1 h-12 rounded-lg bg-linear-to-r from-orange-500 to-orange-600 text-white font-bold hover:shadow-lg transition-all">Thanh toán</button>
+              <button onClick={() => setIsPayModalOpen(true)} disabled={!canPay} title={!canPay ? 'Không thể thanh toán: còn món đang xử lý' : ''} className={`flex-1 h-12 rounded-lg ${canPay ? 'bg-linear-to-r from-orange-500 to-orange-600 text-white font-bold hover:shadow-lg' : 'bg-slate-100 text-slate-400 cursor-not-allowed'} transition-all`}>Thanh toán</button>
             </div>
           </div>
         )}
@@ -299,16 +322,16 @@ useEffect(() => {
                   </div>
                 </Space>
               </Radio.Group>
-              <div className="mt-6 rounded-xl bg-amber-50 border border-amber-200 p-4">
-                <p className="text-sm font-semibold text-amber-900">Tổng thanh toán: <span className="text-orange-600">{formatCurrency(grandTotal)}</span></p>
-              </div>
+                    <div className="mt-6 rounded-xl bg-amber-50 border border-amber-200 p-4">
+                      <p className="text-sm font-semibold text-amber-900">Tổng thanh toán: <span className="text-orange-600">{formatCurrency(servedGrandTotal)}</span></p>
+                    </div>
             </div>
           ) : (
             <div className="flex flex-col items-center py-6 animate-fadeIn">
               <div className="p-2 border rounded-2xl bg-white mb-4 shadow-sm border-slate-200">
                 <img src={qrCodeUrl} alt="VietQR" className="w-64 h-64 rounded-xl" />
               </div>
-              <h2 className="text-2xl font-black text-orange-600 mb-2">{formatCurrency(grandTotal)}</h2>
+              <h2 className="text-2xl font-black text-orange-600 mb-2">{formatCurrency(servedGrandTotal)}</h2>
               <div className="bg-slate-100 p-3 rounded-lg w-full text-center border border-slate-200">
                 <p className="text-xs text-slate-500 mb-1">Nội dung chuyển khoản (Bắt buộc):</p>
                 <p className="text-lg font-mono font-bold text-slate-800 tracking-wider">{paymentContent}</p>

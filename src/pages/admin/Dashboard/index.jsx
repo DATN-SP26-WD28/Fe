@@ -72,11 +72,20 @@ export default function Dashboard() {
       setInvoices(sortedInvoices);
 
       // TÍNH DOANH THU THỰC TẾ
-      const totalRevenue = sortedInvoices.reduce((acc, inv) => acc + (Number(inv.total_amount) || 0), 0);
+      // Dashboard.jsx
+      // Thay vì acc + Number(inv.total_amount)
+      const totalRevenue = sortedInvoices.reduce((acc, inv) => {
+        // CHỈ CỘNG nêú hóa đơn đã thanh toán
+        if (inv.status === 'paid') {
+          return acc + (Number(inv.total_amount) || 0);
+        }
+        return acc;
+      }, 0);
 
       setStats({
         totalRevenue,
-        orderCount: sortedInvoices.length, // Số lượng hóa đơn đã thanh toán
+        // Số lượng hóa đơn cũng chỉ tính hóa đơn đã thu tiền
+        orderCount: sortedInvoices.filter(inv => inv.status === 'paid').length,
         tableOccupancy: 65,
       });
     } catch (error) {
