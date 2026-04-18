@@ -1,137 +1,175 @@
-import React from 'react'
-import { Breadcrumb, Card, Col, Row, Statistic, Table, Tag } from 'antd'
+import React, { useState, useEffect, useMemo } from 'react'
+import { Breadcrumb, Card, Col, Row, Statistic, Table, Tag, Spin, message, Select, Space } from 'antd'
+import invoiceAPI from '@/configs/invoice.api';
 
-const STATUS_MAP = {
-  Shipped: { label: 'Đã thanh toán', color: 'success' },
-  Processing: { label: 'Đang xử lý', color: 'processing' },
-  Pending: { label: 'Chờ thanh toán', color: 'warning' },
-  Cancelled: { label: 'Đã hủy', color: 'error' },
-}
-
-const orders = [
-  {
-    key: 'a1',
-    orderId: '#INV-1042',
-    customer: 'Nguyen Van A',
-    status: 'Shipped',
-    total: 2450000,
-  },
-  {
-    key: 'a2',
-    orderId: '#INV-1043',
-    customer: 'Tran Thi B',
-    status: 'Pending',
-    total: 990000,
-  },
-  {
-    key: 'a3',
-    orderId: '#INV-1044',
-    customer: 'Le Van C',
-    status: 'Cancelled',
-    total: 0,
-  },
-  {
-    key: 'a5',
-    orderId: '#INV-1045',
-    customer: 'Pham D',
-    status: 'Processing',
-    total: 1200000,
-  },
-]
+const { Option } = Select;
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat('vi-VN', {
     style: 'currency',
     currency: 'VND',
-  }).format(value)
-
-const summary = {
-  totalInvoices: orders.length,
-  totalRevenue: orders.reduce((sum, item) => sum + item.total, 0),
-  paidInvoices: orders.filter((item) => item.status === 'Shipped').length,
-  unpaidInvoices: orders.filter((item) => item.status === 'Pending').length,
-}
-
-const columns = [
-  {
-    title: 'Mã đơn',
-    dataIndex: 'orderId',
-    key: 'orderId',
-    render: (value) => <span className="font-medium">{value}</span>,
-  },
-  {
-    title: 'Khách hàng',
-    dataIndex: 'customer',
-    key: 'customer',
-  },
-  {
-    title: 'Tổng tiền',
-    dataIndex: 'total',
-    key: 'total',
-    render: (value) => <span className="font-semibold">{formatCurrency(value)}</span>,
-  },
-  {
-    title: 'Trạng thái',
-    dataIndex: 'status',
-    key: 'status',
-    render: (status) => {
-      const statusInfo = STATUS_MAP[status] || { label: status, color: 'default' }
-      return <Tag color={statusInfo.color}>{statusInfo.label}</Tag>
-    },
-  },
-]
+  }).format(value || 0)
 
 const PaymentAndBill = () => {
-  return (
-    <>
-      <section className="mb-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h1 className="font-bold text-3xl mb-2">Quản lý thanh toán và hóa đơn</h1>
-            <Breadcrumb items={[{ title: 'Trang chủ' }, { title: 'Quản lý thanh toán và hóa đơn' }]} />
-          </div>
-        </div>
-      </section>
+  const [invoices, setInvoices] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [selectedTable, setSelectedTable] = useState('all')
 
-      <Row gutter={[24, 24]} className="mb-6">
-        <Col xs={24} sm={12} xl={6}>
-          <Card className="rounded-2xl shadow-sm border-slate-200">
-            <Statistic title="Tổng hóa đơn" value={summary.totalInvoices} />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} xl={6}>
-          <Card className="rounded-2xl shadow-sm border-slate-200">
+  const fetchInvoices = async () => {
+    try {
+      setLoading(true);
+      const res = await invoiceAPI.getAll();
+
+      // LẤY DỮ LIỆU: Phải truy cập đúng vào res.data.data theo cấu trúc JSON của bạn
+      const rawData = res.data?.data || res.data || [];
+
+      // 1. LỌC: Chỉ lấy paid và đảm bảo rawData là mảng
+      const paidInvoices = Array.isArray(rawData)
+        ? rawData.filter(inv => inv.status?.toLowerCase() === 'paid')
+        : [];
+
+      // 2. SẮP XẾP: Mới nhất lên đầu
+      const sortedData = [...paidInvoices].sort((a, b) => {
+        const dateA = new Date(a.created_at || a.createdAt || 0);
+        const dateB = new Date(b.created_at || b.createdAt || 0);
+        return dateB - dateA;
+      });
+
+      setInvoices(sortedData);
+    } catch (error) {
+      console.error("Lỗi fetch Invoices:", error);
+      message.error("Không thể kết nối đến máy chủ");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInvoices();
+  }, []);
+
+  // 3. TÍNH TOÁN DANH SÁCH BÀN (Dùng String để đồng bộ bộ lọc)
+  const tableNumbers = useMemo(() => {
+    const numbers = invoices
+      .map(inv => inv.table_id?.table_number)
+      .filter(num => num !== undefined && num !== null);
+    return [...new Set(numbers)].sort((a, b) => a - b);
+  }, [invoices]);
+
+  // 4. LỌC THEO BÀN: Ép kiểu String để tránh lỗi Number !== String
+  const filteredData = useMemo(() => {
+    if (selectedTable === 'all') return invoices;
+    return invoices.filter(inv => String(inv.table_id?.table_number) === String(selectedTable));
+  }, [invoices, selectedTable]);
+
+  // 5. THỐNG KÊ
+  const summary = useMemo(() => {
+    return {
+      count: filteredData.length,
+      revenue: filteredData.reduce((sum, inv) => sum + (Number(inv.total_amount) || 0), 0)
+    };
+  }, [filteredData]);
+
+  const columns = [
+    {
+      title: 'Mã hóa đơn',
+      dataIndex: 'invoice_number',
+      key: 'invoice_number',
+      render: (v, record) => <span className="font-mono font-bold text-blue-600">{v || record._id?.slice(-6).toUpperCase()}</span>,
+    },
+    {
+      title: 'Số Bàn',
+      dataIndex: 'table_id',
+      key: 'table_id',
+      render: (table) => <Tag color="volcano" className='font-bold'>Bàn {table?.table_number || '?'}</Tag>,
+    },
+    {
+      title: 'Tổng tiền',
+      dataIndex: 'total_amount',
+      key: 'total_amount',
+      render: (value) => <span className="font-bold text-slate-700">{formatCurrency(value)}</span>,
+    },
+    {
+      title: 'Phương thức',
+      dataIndex: 'payment_method',
+      key: 'payment_method',
+      render: (v) => <Tag color="blue">{v?.toUpperCase() || 'CASH'}</Tag>
+    },
+    {
+      title: 'Thời gian',
+      dataIndex: 'created_at',
+      key: 'created_at',
+      render: (v, record) => <span className='text-gray-400 text-xs'>{new Date(v || record.createdAt).toLocaleString('vi-VN')}</span>,
+    }
+  ];
+
+  if (loading) return (
+    <div className="h-screen flex flex-col items-center justify-center bg-white">
+      <Spin size="large" />
+      <p className="mt-4 text-slate-400">Đang tải dữ liệu doanh thu...</p>
+    </div>
+  );
+
+  return (
+    <div className="p-4 bg-slate-50 min-h-screen">
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-800">Báo Cáo Doanh Thu</h1>
+          <Breadcrumb items={[{ title: 'Admin' }, { title: 'Thanh toán' }]} />
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+          <span className="font-semibold text-slate-500">Lọc theo bàn:</span>
+          <Select
+            value={selectedTable}
+            style={{ width: 180 }}
+            onChange={val => setSelectedTable(val)}
+            className="custom-select"
+          >
+            <Option value="all">Tất cả các bàn</Option>
+            {tableNumbers.map(num => (
+              <Option key={num} value={String(num)}>Bàn số {num}</Option>
+            ))}
+          </Select>
+        </div>
+      </div>
+
+      <Row gutter={[24, 24]} className="mb-8">
+        <Col xs={24} md={8}>
+          <Card className="rounded-3xl border-none shadow-sm overflow-hidden bg-white">
             <Statistic
-              title="Doanh thu" 
-              value={summary.totalRevenue}
-              precision={0}
-              valueStyle={{ fontWeight: 700, fontSize: '24px' }}
-              prefix="₫"
+              title={<span className='text-slate-400 font-medium'>Số lượng hóa đơn</span>}
+              value={summary.count}
+              suffix="phiếu"
+              valueStyle={{ color: '#1d4ed8', fontWeight: 800 }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} xl={6}>
-          <Card className="rounded-2xl shadow-sm border-slate-200">
-            <Statistic title="Đã thanh toán" value={summary.paidInvoices} />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} xl={6}>
-          <Card className="rounded-2xl shadow-sm border-slate-200">
-            <Statistic title="Chờ thanh toán" value={summary.unpaidInvoices} />
+        <Col xs={24} md={16}>
+          <Card className="rounded-3xl border-none shadow-sm bg-white" style={{ borderLeft: '6px solid #f07f29' }}>
+            <Statistic
+              title={<span className='text-slate-400 font-medium'>Doanh thu thực tế {selectedTable !== 'all' ? `(Bàn ${selectedTable})` : ''}</span>}
+              value={summary.revenue}
+              formatter={(val) => formatCurrency(val)}
+              valueStyle={{ color: '#ea580c', fontWeight: 900, fontSize: '32px' }}
+            />
           </Card>
         </Col>
       </Row>
 
-      <Card className="shadow-sm rounded-2xl" title="Đơn hàng gần đây">
+      <Card
+        className="rounded-3xl border-none shadow-sm overflow-hidden"
+        title={<span className="text-slate-800 font-bold">CHI TIẾT GIAO DỊCH</span>}
+      >
         <Table
           columns={columns}
-          dataSource={orders}
-          pagination={{ pageSize: 5 }}
-          className="rounded-xl"
-          rowClassName="hover:bg-slate-50"
+          dataSource={filteredData}
+          rowKey="_id"
+          pagination={{ pageSize: 10 }}
+          className="invoice-table"
         />
       </Card>
-    </>
+    </div>
   )
 }
 
