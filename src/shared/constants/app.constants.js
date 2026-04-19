@@ -40,7 +40,7 @@ export const normalizeOrderStatus = (status) => {
 }
 
 // 5. CÁC NHÓM TRẠNG THÁI ĐỂ FILTER/LOGIC
-export const ORDER_PREPARING_STATUSES = [ORDER_ITEM_STATUS.confirmed] 
+export const ORDER_PREPARING_STATUSES = [ORDER_ITEM_STATUS.confirmed]
 export const ORDER_SERVED_STATUSES = [ORDER_ITEM_STATUS.served]
 export const ORDER_CANCELED_STATUSES = [ORDER_ITEM_STATUS.canceled]
 
@@ -50,7 +50,7 @@ export const ROLE_LABEL_MAP = {
   cashier: { label: 'Thu ngân', color: 'green' },
   waiter: { label: 'Phục vụ', color: 'cyan' },
   chef: { label: 'Nhân viên bếp', color: 'orange' },
-  customer: { label: 'Khách hàng', color: 'default' },
+  customer: { label: 'Nhân viên', color: 'default' },
 }
 
 export const STAFF_ROLE_VALUES = ['admin', 'cashier', 'waiter', 'chef']
