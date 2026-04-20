@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { Breadcrumb, Card, Col, Row, Statistic, Table, Tag, Spin, message, Select, Space, Modal, Button, Divider } from 'antd'
+import { Breadcrumb, Card, Col, Row, Statistic, Table, Tag, Spin, message, Select, Space, Modal, Button, Divider, DatePicker, Input } from 'antd'
+import { ReloadOutlined } from '@ant-design/icons'
 import invoiceAPI from '@/configs/invoice.api';
 import { Eye, FileText, Printer } from 'lucide-react';
 import InvoiceTicket from '@/components/InvoiceTicket';
@@ -19,6 +20,15 @@ const PaymentAndBill = () => {
   const [selectedTable, setSelectedTable] = useState('all')
   const [detailInvoice, setDetailInvoice] = useState(null)
   const [printInvoice, setPrintInvoice] = useState(null)
+  const [range, setRange] = useState([null, null])
+  const [searchText, setSearchText] = useState('')
+  const { Search } = Input
+
+  const resetFilters = () => {
+    setSelectedTable('all')
+    setRange([null, null])
+    setSearchText('')
+  }
 
   const handlePrint = () => {
     const content = document.getElementById('invoice-ticket-content');
@@ -82,13 +92,40 @@ const PaymentAndBill = () => {
 
   // 4. LỌC THEO BÀN: Ép kiểu String để tránh lỗi Number !== String
   const filteredData = useMemo(() => {
-    if (selectedTable === 'all') return invoices;
-    return invoices.filter(inv => String(inv.table_id?.table_number) === String(selectedTable));
-  }, [invoices, selectedTable]);
+    const start = range && range[0] ? range[0].toDate?.() || (range[0] instanceof Date ? range[0] : null) : null
+    const end = range && range[1] ? range[1].toDate?.() || (range[1] instanceof Date ? range[1] : null) : null
+
+    return invoices.filter(inv => {
+      // filter by table
+      if (selectedTable !== 'all' && String(inv.table_id?.table_number) !== String(selectedTable)) return false
+
+      // filter by date range (created_at or createdAt)
+      if (start || end) {
+        const created = new Date(inv.created_at || inv.createdAt || 0)
+        if (start && created < new Date(start.setHours(0, 0, 0, 0))) return false
+        if (end && created > new Date(end.setHours(23, 59, 59, 999))) return false
+      }
+
+      return true
+    })
+  }, [invoices, selectedTable, range]);
+
+  // 5. ÁP DỤNG TÌM KIẾM (Invoice number, guest, table)
+  const searchedData = useMemo(() => {
+    const q = (searchText || '').trim().toLowerCase()
+    if (!q) return filteredData
+
+    return filteredData.filter(inv => {
+      const invoiceNum = (inv.invoice_number || '').toString().toLowerCase()
+      const tableNum = (inv.table_id?.table_number || '').toString().toLowerCase()
+      const guest = (inv.guest_id?.username || inv.guest_name || '').toString().toLowerCase()
+      return invoiceNum.includes(q) || tableNum.includes(q) || guest.includes(q)
+    })
+  }, [filteredData, searchText])
 
   const flatRows = useMemo(() => {
     const rows = [];
-    filteredData.forEach(inv => {
+    searchedData.forEach(inv => {
       const orders = Array.isArray(inv.order_ids) ? inv.order_ids : [];
       if (orders.length === 0) {
         rows.push({ ...inv, _rowKey: inv._id, _order: null, _invoiceRef: inv });
@@ -104,7 +141,7 @@ const PaymentAndBill = () => {
       }
     });
     return rows;
-  }, [filteredData]);
+  }, [searchedData]);
 
   const columns = [
     {
@@ -181,8 +218,15 @@ const PaymentAndBill = () => {
           <h1 className="font-bold text-3xl mb-2">Thanh toán & hóa đơn</h1>
           <Breadcrumb items={[{ title: 'Trang chủ' }, { title: 'Thanh toán & hóa đơn' }]} />
         </section>
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
-          <span className="font-semibold text-slate-500">Lọc theo bàn:</span>
+
+      </div>
+
+      <Card
+        className="rounded-3xl border-none shadow-sm overflow-hidden"
+        title={<span className="text-slate-800 font-bold">Lịch sử giao dịch</span>}
+      >
+        <div className="p-4 flex items-center gap-4 mb-6">
+          <span className="font-semibold text-slate-500">Bàn số:</span>
           <Select
             value={selectedTable}
             style={{ width: 180 }}
@@ -194,13 +238,32 @@ const PaymentAndBill = () => {
               <Option key={num} value={String(num)}>Bàn số {num}</Option>
             ))}
           </Select>
+          <div className="flex items-center gap-3">
+            <span className="font-semibold text-slate-500">Thời gian:</span>
+            <DatePicker.RangePicker
+              value={range}
+              onChange={(vals) => setRange(vals || [null, null])}
+              allowClear
+              placeholder={["Từ ngày", "Đến ngày"]}
+              style={{ width: 200 }}
+            />
+            <div className="flex items-center gap-3">
+              <span className="font-semibold text-slate-500">Tìm kiếm:</span>
+              <Search
+                placeholder="Tìm kiếm mã/bàn/khách"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                allowClear
+                style={{ width: 200 }}
+              />
+            </div>
+            <div>
+              <Button onClick={resetFilters} icon={<ReloadOutlined />} title="Đặt lại bộ lọc">
+                Đặt lại
+              </Button>
+            </div>
+          </div>
         </div>
-      </div>
-
-      <Card
-        className="rounded-3xl border-none shadow-sm overflow-hidden"
-        title={<span className="text-slate-800 font-bold">Lịch sử giao dịch</span>}
-      >
         <Table
           columns={columns}
           dataSource={flatRows}
