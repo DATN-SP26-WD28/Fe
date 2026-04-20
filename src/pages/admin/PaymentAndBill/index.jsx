@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { Breadcrumb, Card, Col, Row, Statistic, Table, Tag, Spin, message, Select, Space } from 'antd'
+import { Breadcrumb, Card, Col, Row, Statistic, Table, Tag, Spin, message, Select, Space, Modal, Button, Divider } from 'antd'
 import invoiceAPI from '@/configs/invoice.api';
+import { Eye, FileText, Printer } from 'lucide-react';
+import InvoiceTicket from '@/components/InvoiceTicket';
+import InvoiceDetail from '@/components/InvoiceDetail';
 
 const { Option } = Select;
 
@@ -14,6 +17,26 @@ const PaymentAndBill = () => {
   const [invoices, setInvoices] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedTable, setSelectedTable] = useState('all')
+  const [detailInvoice, setDetailInvoice] = useState(null)
+  const [printInvoice, setPrintInvoice] = useState(null)
+
+  const handlePrint = () => {
+    const content = document.getElementById('invoice-ticket-content');
+    if (!content) return;
+    const win = window.open('', '_blank', 'width=480,height=700');
+    win.document.write(`
+      <html><head><title>Hóa đơn</title>
+      <style>
+        body { margin: 0; font-family: monospace; }
+        @media print { body { margin: 0; } }
+      </style>
+      </head><body>${content.innerHTML}</body></html>
+    `);
+    win.document.close();
+    win.focus();
+    win.print();
+    win.close();
+  };
 
   const fetchInvoices = async () => {
     try {
@@ -43,6 +66,7 @@ const PaymentAndBill = () => {
       setLoading(false);
     }
   };
+  console.log("detailInvoice", detailInvoice)
 
   useEffect(() => {
     fetchInvoices();
@@ -62,12 +86,24 @@ const PaymentAndBill = () => {
     return invoices.filter(inv => String(inv.table_id?.table_number) === String(selectedTable));
   }, [invoices, selectedTable]);
 
-  // 5. THỐNG KÊ
-  const summary = useMemo(() => {
-    return {
-      count: filteredData.length,
-      revenue: filteredData.reduce((sum, inv) => sum + (Number(inv.total_amount) || 0), 0)
-    };
+  const flatRows = useMemo(() => {
+    const rows = [];
+    filteredData.forEach(inv => {
+      const orders = Array.isArray(inv.order_ids) ? inv.order_ids : [];
+      if (orders.length === 0) {
+        rows.push({ ...inv, _rowKey: inv._id, _order: null, _invoiceRef: inv });
+      } else {
+        orders.forEach((order, idx) => {
+          rows.push({
+            ...inv,
+            _rowKey: `${inv._id}_${order._id || idx}`,
+            _order: order,
+            _invoiceRef: inv,
+          });
+        });
+      }
+    });
+    return rows;
   }, [filteredData]);
 
   const columns = [
@@ -75,7 +111,10 @@ const PaymentAndBill = () => {
       title: 'Mã hóa đơn',
       dataIndex: 'invoice_number',
       key: 'invoice_number',
-      render: (v, record) => <span className="font-mono font-bold text-blue-600">{v || record._id?.slice(-6).toUpperCase()}</span>,
+      render: (_, record) => {
+        const id = record._order?._id;
+        return id ? <span className="font-mono text-slate-500 uppercase">{id.slice(-8).toUpperCase()}</span> : <span className="text-gray-300">—</span>;
+      },
     },
     {
       title: 'Số Bàn',
@@ -84,22 +123,45 @@ const PaymentAndBill = () => {
       render: (table) => <Tag color="volcano" className='font-bold'>Bàn {table?.table_number || '?'}</Tag>,
     },
     {
-      title: 'Tổng tiền',
-      dataIndex: 'total_amount',
-      key: 'total_amount',
-      render: (value) => <span className="font-bold text-slate-700">{formatCurrency(value)}</span>,
-    },
-    {
       title: 'Phương thức',
       dataIndex: 'payment_method',
       key: 'payment_method',
-      render: (v) => <Tag color="blue">{v?.toUpperCase() || 'CASH'}</Tag>
+      render: (v) => <Tag color="blue">{v?.toUpperCase() || 'Tiền mặt'}</Tag>
     },
     {
       title: 'Thời gian',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (v, record) => <span className='text-gray-400 text-xs'>{new Date(v || record.createdAt).toLocaleString('vi-VN')}</span>,
+      render: (v, record) => <span className='text-gray-500 text-sm'>{new Date(v || record.createdAt).toLocaleString('vi-VN')}</span>,
+    },
+    {
+      title: 'Tổng tiền',
+      dataIndex: 'total_amount',
+      key: 'total_amount',
+      render: (value) => <span className="font-bold text-orange-500">{formatCurrency(value)}</span>,
+    },
+    {
+      title: 'Thao tác',
+      dataIndex: 'action',
+      key: 'action',
+      align: "center",
+      width: 120,
+      render: (_, record) => (
+        <Space>
+          <Button
+            type="link"
+            onClick={() => setDetailInvoice(record._invoiceRef)}
+            icon={<Eye size={16} />}
+          >
+          </Button>
+          <Button
+            type="link"
+            onClick={() => setPrintInvoice(record._invoiceRef)}
+            icon={<FileText size={16} />}
+          >
+          </Button>
+        </Space>
+      ),
     }
   ];
 
@@ -111,13 +173,12 @@ const PaymentAndBill = () => {
   );
 
   return (
-    <div className="p-4 bg-slate-50 min-h-screen">
+    <>
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800">Báo Cáo Doanh Thu</h1>
-          <Breadcrumb items={[{ title: 'Admin' }, { title: 'Thanh toán' }]} />
-        </div>
-
+        <section className="mb-3">
+          <h1 className="font-bold text-3xl mb-2">Thanh toán & hóa đơn</h1>
+          <Breadcrumb items={[{ title: 'Trang chủ' }, { title: 'Thanh toán & hóa đơn' }]} />
+        </section>
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
           <span className="font-semibold text-slate-500">Lọc theo bàn:</span>
           <Select
@@ -134,42 +195,52 @@ const PaymentAndBill = () => {
         </div>
       </div>
 
-      <Row gutter={[24, 24]} className="mb-8">
-        <Col xs={24} md={8}>
-          <Card className="rounded-3xl border-none shadow-sm overflow-hidden bg-white">
-            <Statistic
-              title={<span className='text-slate-400 font-medium'>Số lượng hóa đơn</span>}
-              value={summary.count}
-              suffix="phiếu"
-              valueStyle={{ color: '#1d4ed8', fontWeight: 800 }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} md={16}>
-          <Card className="rounded-3xl border-none shadow-sm bg-white" style={{ borderLeft: '6px solid #f07f29' }}>
-            <Statistic
-              title={<span className='text-slate-400 font-medium'>Doanh thu thực tế {selectedTable !== 'all' ? `(Bàn ${selectedTable})` : ''}</span>}
-              value={summary.revenue}
-              formatter={(val) => formatCurrency(val)}
-              valueStyle={{ color: '#ea580c', fontWeight: 900, fontSize: '32px' }}
-            />
-          </Card>
-        </Col>
-      </Row>
-
       <Card
         className="rounded-3xl border-none shadow-sm overflow-hidden"
-        title={<span className="text-slate-800 font-bold">CHI TIẾT GIAO DỊCH</span>}
+        title={<span className="text-slate-800 font-bold">Lịch sử giao dịch</span>}
       >
         <Table
           columns={columns}
-          dataSource={filteredData}
-          rowKey="_id"
+          dataSource={flatRows}
+          rowKey="_rowKey"
           pagination={{ pageSize: 10 }}
           className="invoice-table"
         />
       </Card>
-    </div>
+
+      <Modal
+        open={!!printInvoice}
+        onCancel={() => setPrintInvoice(null)}
+        centered
+        title={<span className="font-bold">In hóa đơn: {printInvoice?.invoice_number}</span>}
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setPrintInvoice(null)}>Đóng</Button>
+            <Button type="primary" icon={<Printer size={15} />} onClick={handlePrint}>
+              In hóa đơn
+            </Button>
+          </div>
+        }
+        width={480}
+      >
+        <InvoiceTicket invoice={printInvoice} />
+      </Modal>
+
+      <Modal
+        open={!!detailInvoice}
+        onCancel={() => setDetailInvoice(null)}
+        footer={null}
+        centered
+        title={
+          <span className="font-bold text-blue-700">
+            Chi tiết hóa đơn: {detailInvoice?.invoice_number}
+          </span>
+        }
+        width={640}
+      >
+        {detailInvoice && <InvoiceDetail invoice={detailInvoice} />}
+      </Modal>
+    </>
   )
 }
 
