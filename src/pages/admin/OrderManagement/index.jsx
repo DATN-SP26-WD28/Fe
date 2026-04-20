@@ -11,7 +11,7 @@ import {
   ORDER_ITEM_STATUS_OPTIONS,
   normalizeOrderStatus,
 } from '@/shared/constants/app.constants'
-import { CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, SyncOutlined } from '@ant-design/icons'
+import { CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, ReloadOutlined, SyncOutlined } from '@ant-design/icons'
 import { App, Breadcrumb, Button, Card, Select, Table, Tag, message, notification, Input } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ShoppingBasket } from 'lucide-react'
@@ -70,6 +70,7 @@ const OrderManagementContent = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [updatingItemId, setUpdatingItemId] = useState(null)
   const [filterStatus, setFilterStatus] = useState(null);
+  const [selectedTable, setSelectedTable] = useState('all');
   const [searchText, setSearchText] = useState('');
   const { Search } = Input
 
@@ -78,6 +79,8 @@ const OrderManagementContent = () => {
     let rows = allRows
 
     if (filterStatus) rows = rows.filter((row) => row.itemStatus === filterStatus)
+
+    if (selectedTable && selectedTable !== 'all') rows = rows.filter(row => String(row.tableNumber) === String(selectedTable))
 
     const q = (searchText || '').trim().toLowerCase()
     if (q) {
@@ -90,7 +93,12 @@ const OrderManagementContent = () => {
     }
 
     return rows
-  }, [orders, itemStatusById, filterStatus, searchText])
+  }, [orders, itemStatusById, filterStatus, searchText, selectedTable])
+
+  const tableNumbers = useMemo(() => {
+    const nums = (orders || []).map(o => o.table_id?.table_number).filter(n => n !== undefined && n !== null)
+    return [...new Set(nums)].sort((a, b) => a - b)
+  }, [orders])
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
@@ -294,7 +302,7 @@ const OrderManagementContent = () => {
           <Breadcrumb items={[{ title: 'Trang chủ' }, { title: 'Quản lý đơn hàng' }]} />
         </section>
         <Button type="primary" onClick={() => setIsCreateModalOpen(true)}>
-          <ShoppingBasket size={16}/> Tạo đơn hàng
+          <ShoppingBasket size={16} /> Tạo đơn hàng
         </Button>
       </section>
 
@@ -333,9 +341,10 @@ const OrderManagementContent = () => {
               placeholder="Tìm kiếm..."
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              style={{ maxWidth: 300 }}
+              style={{ maxWidth: 200 }}
             />
           </div>
+
           <div style={{ marginBottom: 12 }} className="flex items-center gap-2">
             <div className='font-semibold'>Trạng thái:</div>
             <Select
@@ -344,8 +353,35 @@ const OrderManagementContent = () => {
               options={ORDER_ITEM_STATUS_OPTIONS}
               allowClear
               onChange={(value) => setFilterStatus(value ?? null)}
-              style={{ minWidth: 220 }}
+              style={{ minWidth: 200 }}
             />
+          </div>
+          <div style={{ marginBottom: 12 }} className="flex items-center gap-2">
+            <div className='font-semibold'>Bàn số:</div>
+            <Select
+              value={selectedTable}
+              style={{ minWidth: 200 }}
+              onChange={(val) => setSelectedTable(val)}
+            >
+              <Select.Option value={'all'}>Tất cả</Select.Option>
+              {tableNumbers.map(tn => (
+                <Select.Option key={tn} value={String(tn)}>Bàn số {tn}</Select.Option>
+              ))}
+            </Select>
+          </div>
+          <div style={{ marginBottom: 12 }} className="flex items-center gap-2">
+            <Button
+              onClick={() => {
+                setSearchText('')
+                setFilterStatus(null)
+                setSelectedTable('all')
+              }}
+              size="middle"
+              icon={<ReloadOutlined />}
+              title="Đặt lại bộ lọc"
+            >
+              Đặt lại
+            </Button>
           </div>
         </section>
 

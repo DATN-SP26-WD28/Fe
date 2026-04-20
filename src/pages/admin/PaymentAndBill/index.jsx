@@ -149,14 +149,16 @@ const PaymentAndBill = () => {
       render: (_, record) => (
         <Space>
           <Button
-            type="link"
+            type="text"
             onClick={() => setDetailInvoice(record._invoiceRef)}
+            title='Xem chi tiết'
             icon={<Eye size={16} />}
           >
           </Button>
           <Button
-            type="link"
+            type="text"
             onClick={() => setPrintInvoice(record._invoiceRef)}
+            title='Xem hóa đơn'
             icon={<FileText size={16} />}
           >
           </Button>
