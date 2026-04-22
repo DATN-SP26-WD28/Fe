@@ -14,7 +14,7 @@ import OrderManagement from '@/pages/admin/OrderManagement'
 import PaymentAndBill from '@/pages/admin/PaymentAndBill'
 import ReviewManagement from '@/pages/admin/ReviewManagement'
 import StaffManagement from '@/pages/admin/StaffManagement'
-import UserManagement from '@/pages/admin/UserManagement'
+// import UserManagement from '@/pages/admin/UserManagement'
 // Guest pages
 import {
   CallStaffPage,
@@ -74,7 +74,7 @@ const AppRoutes = () => {
             <Route path="payment-and-billing" element={<PaymentAndBill />} />
             <Route path="reviews" element={<ReviewManagement />} />
             <Route path="staffs" element={<StaffManagement />} />
-            <Route path="users" element={<UserManagement />} />
+            {/* <Route path="users" element={<UserManagement />} /> */}
           </Route>
         {/* </Route> */}
         {/* Global Fallback */}

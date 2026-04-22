@@ -1,38 +1,32 @@
 import axiosInstance from './axiosClient';
 
-/**
- * Lấy danh sách tất cả người dùng
- */
-export const fetchUsers = async () => {
-  const { data } = await axiosInstance.get('/users');
-  return data; // Trả về mảng users từ createResponse của backend
-};
-
-/**
- * Tạo người dùng mới
- * @param {Object} userData { name, email, phone, role }
- */
-export const createUser = async (userData) => {
-  const { data } = await axiosInstance.post('/users', userData);
+// Lấy danh sách nhân viên (role customer)
+export const fetchStaff = async () => {
+  const { data } = await axiosInstance.get('/users/customers');
   return data;
 };
 
-/**
- * Cập nhật thông tin người dùng
- * @param {string} id User ID
- * @param {Object} userData { name, email, phone, role }
- */
-export const updateUser = async (id, userData) => {
-  const { data } = await axiosInstance.put(`/users/${id}`, userData);
+// Tạo nhân viên mới
+export const createStaff = async (staffData) => {
+  const { data } = await axiosInstance.post('/users', staffData);
   return data;
 };
 
-/**
- * Xóa người dùng
- * @param {string} id User ID
- */
-export const deleteUser = async (id) => {
+// Cập nhật thông tin
+export const updateStaff = async (id, staffData) => {
+  const { data } = await axiosInstance.put(`/users/${id}`, staffData);
+  return data;
+};
+
+// Xóa nhân viên vĩnh viễn
+export const deleteStaff = async (id) => {
   const { data } = await axiosInstance.delete(`/users/${id}`);
+  return data;
+};
+
+// Khóa / Mở khóa nhân viên
+export const toggleStaffStatus = async (id) => {
+  const { data } = await axiosInstance.patch(`/users/lock-user/${id}`);
   return data;
 };
 
