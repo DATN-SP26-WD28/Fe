@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Card, Table, Tag, Breadcrumb, Button, Form, Popconfirm, Space, message } from 'antd';
-import { Edit, Trash2, Plus } from 'lucide-react';
+// Bổ sung import icon Lock
+import { Edit, Trash2, Plus, Lock, Unlock } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
 import { ROLE_LABEL_MAP } from '@/shared/constants/app.constants';
 import StaffForm from './StaffForm';
-import { createStaff, deleteStaff, fetchStaff, updateStaff } from '@/configs/user.api';
+import { createStaff, deleteStaff, fetchStaff, toggleStaffStatus, updateStaff } from '@/configs/user.api';
 
 const StaffManagement = () => {
   const queryClient = useQueryClient();
@@ -12,13 +14,11 @@ const StaffManagement = () => {
   const [editingStaff, setEditingStaff] = useState(null);
   const [form] = Form.useForm();
 
-  // 1. Fetch dữ liệu
   const { data: staff = [], isLoading } = useQuery({
     queryKey: ['staff'],
     queryFn: fetchStaff,
   });
 
-  // 2. Các Mutations (Thêm, Sửa, Xóa)
   const createMutation = useMutation({
     mutationFn: createStaff,
     onSuccess: () => {
@@ -54,7 +54,18 @@ const StaffManagement = () => {
     },
   });
 
-  // 3. Xử lý các action (Mở modal, Submit, Đóng modal)
+  // MỚI: Mutation xử lý Khóa / Mở khóa
+  const toggleStatusMutation = useMutation({
+    mutationFn: toggleStaffStatus,
+    onSuccess: () => {
+      message.success('Cập nhật trạng thái thành công');
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
+    },
+    onError: (err) => {
+      message.error(err.response?.data?.message || 'Lỗi khi cập nhật trạng thái');
+    },
+  });
+
   const openCreateModal = () => {
     setEditingStaff(null);
     form.resetFields();
@@ -67,8 +78,6 @@ const StaffManagement = () => {
       username: record.username,
       email: record.email,
       phone: record.phone,
-      // Không cần set role ở form nếu mặc định luôn là customer, 
-      // nhưng nếu form có field này thì cứ giữ lại
       role: record.role,
     });
     setVisibleModal(true);
@@ -78,8 +87,12 @@ const StaffManagement = () => {
     deleteMutation.mutate(id);
   };
 
+  // MỚI: Hàm gọi API khóa
+  const onToggleStatus = (id) => {
+    toggleStatusMutation.mutate(id);
+  };
+
   const onFinish = async (values) => {
-    // Đảm bảo payload luôn mang role customer theo đúng logic BE hiện tại
     const payload = { ...values, role: 'customer' };
 
     if (editingStaff) {
@@ -95,7 +108,6 @@ const StaffManagement = () => {
     form.resetFields();
   };
 
-  // 4. Cấu hình Cột cho Table
   const columns = [
     {
       title: 'STT',
@@ -125,36 +137,68 @@ const StaffManagement = () => {
       dataIndex: 'role',
       key: 'role',
       render: (role) => {
-        // Fallback an toàn nếu role bị null hoặc không khớp trong hằng số
         const config = ROLE_LABEL_MAP[role] || { label: role || 'Không xác định', color: 'default' };
         return <Tag color={config.color}>{config.label}</Tag>;
       },
     },
     {
+      title: 'Trạng thái',
+      key: 'status',
+      align: 'center',
+      render: (_, record) => {
+        // Giả định backend trả về isLocked. Thay đổi theo data thực tế của bạn
+        const isLocked = record.isLocked || record.status === 'locked';
+        return (
+          <Tag color={isLocked ? 'error' : 'success'}>
+            {isLocked ? 'Đã khóa' : 'Hoạt động'}
+          </Tag>
+        );
+      }
+    },
+    {
       title: 'Thao tác',
       key: 'actions',
       align: 'center',
-      width: 120,
-      render: (_, record) => (
-        <Space>
-          <Button
-            type="text"
-            icon={<Edit size={18} className="text-blue-500" />}
-            onClick={() => onEdit(record)}
-            title="Sửa"
-          />
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa?"
-            description={`Xóa nhân viên ${record.username}?`}
-            okText="Xóa"
-            cancelText="Hủy"
-            okButtonProps={{ danger: true }}
-            onConfirm={() => onDelete(record._id)}
-          >
-            <Button type="text" icon={<Trash2 size={18} />} title="Xóa" className="text-red-500 hover:text-red-700" />
-          </Popconfirm>
-        </Space>
-      ),
+      width: 180,
+      render: (_, record) => {
+        // Giả định tương tự để đổi icon Lock/Unlock
+        const isLocked = record.isLocked || record.status === 'locked';
+
+        return (
+          <Space>
+            <Button
+              type="text"
+              icon={<Edit size={18} className="text-blue-500" />}
+              onClick={() => onEdit(record)}
+              title="Sửa"
+            />
+
+            <Popconfirm
+              title={isLocked ? "Mở khóa tài khoản này?" : "Khóa tài khoản này?"}
+              okText="Đồng ý"
+              cancelText="Hủy"
+              onConfirm={() => onToggleStatus(record._id)}
+            >
+              <Button
+                type="text"
+                icon={isLocked ? <Unlock size={18} className="text-green-500" /> : <Lock size={18} className="text-orange-500" />}
+                title={isLocked ? "Mở khóa" : "Khóa"}
+              />
+            </Popconfirm>
+
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa?"
+              description={`Xóa nhân viên ${record.username}?`}
+              okText="Xóa"
+              cancelText="Hủy"
+              okButtonProps={{ danger: true }}
+              onConfirm={() => onDelete(record._id)}
+            >
+              <Button type="text" icon={<Trash2 size={18} />} title="Xóa" className="text-red-500 hover:text-red-700" />
+            </Popconfirm>
+          </Space>
+        );
+      },
     },
   ];
 
@@ -175,15 +219,15 @@ const StaffManagement = () => {
         <Table
           columns={columns}
           dataSource={staff}
-          rowKey="_id" // Chuẩn hóa ID cho MongoDB
+          rowKey="_id"
           loading={isLoading}
           pagination={{
             pageSize: 7,
-            showSizeChanger: false, // Ẩn chọn số dòng nếu không cần thiết
+            showSizeChanger: false,
             showTotal: (total) => `Tổng cộng ${total} nhân viên`
           }}
           className="rounded-xl overflow-hidden"
-          scroll={{ x: 'max-content' }} // Giúp bảng cuộn ngang trên màn hình nhỏ thay vì bóp méo cột
+          scroll={{ x: 'max-content' }}
         />
       </Card>
 
