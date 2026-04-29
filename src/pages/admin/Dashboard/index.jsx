@@ -9,17 +9,120 @@ const BRAND_COLOR = '#f07f29';
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [invoices, setInvoices] = useState([]);
-  const [timeFilter, setTimeFilter] = useState('week');
-  const [stats, setStats] = useState({
-    totalRevenue: 0,
-    orderCount: 0,
-    tableOccupancy: 0,
-  });
+  const [timeFilter, setTimeFilter] = useState('week'); // Mặc định là Tuần này
 
-  // 1. Logic tính Top món ăn thịnh hành
+  // 1. LẤY DỮ LIỆU TỪ SERVER (Chỉ gọi 1 lần)
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    try {
+      const invoicesRes = await invoiceAPI.getAll();
+      const allInvoices = invoicesRes.data?.invoices || invoicesRes.data?.data || invoicesRes.data || [];
+      const invoiceList = Array.isArray(allInvoices) ? allInvoices : [];
+
+      const sortedInvoices = [...invoiceList].sort((a, b) =>
+        new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt)
+      );
+
+      setInvoices(sortedInvoices);
+    } catch (error) {
+      console.error("Lỗi fetch dashboard:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  // 2. LOGIC BỘ LỌC THỜI GIAN (Tự động cập nhật khi đổi tab)
+  const filteredInvoices = useMemo(() => {
+    const now = new Date();
+
+    // Tìm ngày đầu tuần (Thứ 2) và cuối tuần (Chủ nhật)
+    const currentDay = now.getDay();
+    const diffToMonday = currentDay === 0 ? -6 : 1 - currentDay;
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() + diffToMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    return invoices.filter(inv => {
+      // Chỉ quan tâm hóa đơn đã thanh toán
+      if (inv.status !== 'paid') return false;
+
+      const d = new Date(inv.created_at || inv.createdAt);
+      if (!d) return false;
+
+      // Lọc theo Tuần, Tháng, Năm
+      if (timeFilter === 'week') {
+        return d >= startOfWeek && d <= endOfWeek;
+      } else if (timeFilter === 'month') {
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      } else if (timeFilter === 'year') {
+        return d.getFullYear() === now.getFullYear();
+      }
+      return true;
+    });
+  }, [invoices, timeFilter]);
+
+  // 3. TÍNH TOÁN CÁC CHỈ SỐ TỔNG QUAN (Dựa trên dữ liệu đã lọc)
+  const stats = useMemo(() => {
+    const totalRevenue = filteredInvoices.reduce((acc, inv) => acc + (Number(inv.total_amount) || 0), 0);
+    return {
+      totalRevenue,
+      orderCount: filteredInvoices.length,
+      tableOccupancy: 65, // Giả lập tỷ lệ lấp đầy
+    };
+  }, [filteredInvoices]);
+
+  // 4. CHUẨN BỊ DỮ LIỆU BIỂU ĐỒ (Thay đổi form tùy theo Tuần/Tháng/Năm)
+  const chartData = useMemo(() => {
+    const now = new Date();
+
+    if (timeFilter === 'week') {
+      const data = [
+        { time: 'T2', revenue: 0 }, { time: 'T3', revenue: 0 }, { time: 'T4', revenue: 0 },
+        { time: 'T5', revenue: 0 }, { time: 'T6', revenue: 0 }, { time: 'T7', revenue: 0 }, { time: 'CN', revenue: 0 },
+      ];
+      filteredInvoices.forEach(inv => {
+        const d = new Date(inv.created_at || inv.createdAt);
+        const day = d.getDay(); // 0(CN) -> 6(T7)
+        const idx = day === 0 ? 6 : day - 1; // Chuyển đổi index cho mảng (T2=0, CN=6)
+        data[idx].revenue += Number(inv.total_amount) || 0;
+      });
+      return data;
+
+    } else if (timeFilter === 'month') {
+      // Biểu đồ từ ngày 1 đến cuối tháng
+      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const data = Array.from({ length: daysInMonth }, (_, i) => ({ time: `${i + 1}`, revenue: 0 }));
+      filteredInvoices.forEach(inv => {
+        const d = new Date(inv.created_at || inv.createdAt);
+        const dateNum = d.getDate(); // Ngày 1 -> 31
+        data[dateNum - 1].revenue += Number(inv.total_amount) || 0;
+      });
+      return data;
+
+    } else if (timeFilter === 'year') {
+      // Biểu đồ từ Tháng 1 đến Tháng 12
+      const data = Array.from({ length: 12 }, (_, i) => ({ time: `Th${i + 1}`, revenue: 0 }));
+      filteredInvoices.forEach(inv => {
+        const d = new Date(inv.created_at || inv.createdAt);
+        const monthNum = d.getMonth(); // 0 -> 11
+        data[monthNum].revenue += Number(inv.total_amount) || 0;
+      });
+      return data;
+    }
+  }, [filteredInvoices, timeFilter]);
+
+  // 5. TOP MÓN ĂN THỊNH HÀNH (Đồng bộ thời gian với biểu đồ)
   const topDishesData = useMemo(() => {
     const dishCounts = {};
-    invoices.forEach(inv => {
+    filteredInvoices.forEach(inv => {
       const orders = inv.order_ids || [];
       orders.forEach(order => {
         const items = order.items || [];
@@ -38,78 +141,9 @@ export default function Dashboard() {
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
-  }, [invoices]);
+  }, [filteredInvoices]);
 
-  // 2. MỚI: Tự động nhóm dữ liệu hóa đơn cho Biểu đồ
-  const chartData = useMemo(() => {
-    // Khởi tạo mảng dữ liệu 7 ngày với doanh thu ban đầu là 0
-    const weeklyData = [
-      { time: 'T2', revenue: 0 },
-      { time: 'T3', revenue: 0 },
-      { time: 'T4', revenue: 0 },
-      { time: 'T5', revenue: 0 },
-      { time: 'T6', revenue: 0 },
-      { time: 'T7', revenue: 0 },
-      { time: 'CN', revenue: 0 },
-    ];
-
-    invoices.forEach(inv => {
-      // Chỉ cộng tiền những hóa đơn đã thanh toán (paid)
-      if (inv.status === 'paid') {
-        const dateString = inv.created_at || inv.createdAt;
-        if (dateString) {
-          const date = new Date(dateString);
-          const day = date.getDay(); // Trả về 0 (CN) đến 6 (T7)
-
-          // Chuyển đổi getDay() sang index của mảng weeklyData
-          // Nếu là CN (0) -> index = 6, T2 (1) -> index = 0, T3 (2) -> index = 1, ...
-          const index = day === 0 ? 6 : day - 1;
-
-          weeklyData[index].revenue += (Number(inv.total_amount) || 0);
-        }
-      }
-    });
-
-    return weeklyData;
-  }, [invoices]);
-
-  // 3. Fetch Data tổng
-  const fetchDashboardData = async () => {
-    setLoading(true);
-    try {
-      const [invoicesRes] = await Promise.all([invoiceAPI.getAll()]);
-      const allInvoices = invoicesRes.data?.invoices || invoicesRes.data?.data || invoicesRes.data || [];
-      const invoiceList = Array.isArray(allInvoices) ? allInvoices : [];
-
-      const sortedInvoices = [...invoiceList].sort((a, b) =>
-        new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt)
-      );
-
-      setInvoices(sortedInvoices);
-
-      const totalRevenue = sortedInvoices.reduce((acc, inv) => {
-        if (inv.status === 'paid') {
-          return acc + (Number(inv.total_amount) || 0);
-        }
-        return acc;
-      }, 0);
-
-      setStats({
-        totalRevenue,
-        orderCount: sortedInvoices.filter(inv => inv.status === 'paid').length,
-        tableOccupancy: 65, // Số giả lập, nếu bạn có API check bàn thì map vào đây
-      });
-    } catch (error) {
-      console.error("Lỗi fetch dashboard:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
+  // Bảng giao dịch gần nhất
   const columns = [
     {
       title: 'Mã hóa đơn',
@@ -131,7 +165,11 @@ export default function Dashboard() {
       title: 'Trạng thái',
       key: 'status',
       align: 'center',
-      render: () => <Tag color="success" className="border-none bg-green-50 text-green-600 font-medium rounded-md">Đã thu tiền</Tag>,
+      render: (_, record) => (
+        <Tag color={record.status === 'paid' ? 'success' : 'warning'} className="border-none rounded-md">
+          {record.status === 'paid' ? 'Đã thu tiền' : 'Chưa thu'}
+        </Tag>
+      ),
     },
     {
       title: 'Tổng tiền',
@@ -161,10 +199,11 @@ export default function Dashboard() {
             <Breadcrumb items={[{ title: 'Trang chủ' }, { title: 'Thống kê' }]} className="text-slate-500" />
           </div>
           <div className="flex items-center gap-3">
+            {/* Đã cập nhật Radio Group theo yêu cầu của bạn */}
             <Radio.Group value={timeFilter} onChange={(e) => setTimeFilter(e.target.value)} buttonStyle="solid" className="shadow-sm">
-              <Radio.Button value="today">Hôm nay</Radio.Button>
               <Radio.Button value="week">Tuần này</Radio.Button>
               <Radio.Button value="month">Tháng này</Radio.Button>
+              <Radio.Button value="year">Năm nay</Radio.Button>
             </Radio.Group>
             <Button type="primary" className="rounded-lg flex items-center gap-2 shadow-md shadow-orange-200" icon={<FireOutlined />} onClick={fetchDashboardData} style={{ backgroundColor: BRAND_COLOR, borderColor: BRAND_COLOR }}>
               Làm mới
@@ -185,9 +224,6 @@ export default function Dashboard() {
             suffix="đ"
             valueStyle={{ color: BRAND_COLOR, fontWeight: 800, fontSize: '28px' }}
           />
-          <div className="mt-2 text-xs font-medium text-green-500 flex items-center gap-1">
-            <ArrowUpOutlined /> 12.5% <span className="text-slate-400 font-normal">so với kỳ trước</span>
-          </div>
         </Card>
 
         <Card className="rounded-2xl border-none shadow-sm hover:shadow-md transition-shadow">
@@ -197,9 +233,6 @@ export default function Dashboard() {
             prefix={<FileDoneOutlined className="text-blue-500 mr-2 text-xl" />}
             valueStyle={{ fontWeight: 700, fontSize: '28px', color: '#1e293b' }}
           />
-          <div className="mt-2 text-xs font-medium text-green-500 flex items-center gap-1">
-            <ArrowUpOutlined /> 8.2% <span className="text-slate-400 font-normal">so với kỳ trước</span>
-          </div>
         </Card>
 
         <Card className="rounded-2xl border-none shadow-sm hover:shadow-md transition-shadow">
@@ -219,9 +252,6 @@ export default function Dashboard() {
             prefix={<SmileOutlined className="text-green-500 mr-2 text-xl" />}
             valueStyle={{ color: '#10b981', fontWeight: 700, fontSize: '28px' }}
           />
-          <div className="mt-2 text-xs font-medium text-slate-400 flex items-center gap-1">
-            Dựa trên 150 đánh giá
-          </div>
         </Card>
       </div>
 
@@ -230,7 +260,6 @@ export default function Dashboard() {
         <Card className="xl:col-span-2 rounded-2xl border-none shadow-sm" title={<span className="font-bold text-slate-700">Biểu đồ doanh thu</span>}>
           <div className="h-[300px] w-full mt-2">
             <ResponsiveContainer width="100%" height="100%">
-              {/* Truyền biến chartData thật vào Recharts */}
               <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
@@ -239,9 +268,24 @@ export default function Dashboard() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} tickFormatter={(value) => `${value / 1000000}M`} dx={-10} />
+                <XAxis
+                  dataKey="time"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#64748b', fontSize: 12 }}
+                  dy={10}
+                  // Chỉ hiển thị vài tick nếu dùng biểu đồ Tháng để tránh bị chèn chữ
+                  interval={timeFilter === 'month' ? 4 : 'preserveStartEnd'}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#64748b', fontSize: 12 }}
+                  tickFormatter={(value) => value >= 1000000 ? `${(value / 1000000).toFixed(1)}M` : `${value / 1000}k`}
+                  dx={-10}
+                />
                 <Tooltip
+                  labelFormatter={(label) => timeFilter === 'month' ? `Ngày ${label}` : label}
                   formatter={(value) => [new Intl.NumberFormat('vi-VN').format(value) + 'đ', 'Doanh thu']}
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                 />
@@ -285,7 +329,7 @@ export default function Dashboard() {
         <Card className="xl:col-span-3 rounded-2xl border-none shadow-sm" title={<span className="font-bold text-slate-700">Lịch sử giao dịch mới nhất</span>}>
           <Table
             columns={columns}
-            dataSource={invoices.slice(0, 5)}
+            dataSource={invoices.slice(0, 5)} // Bảng này thường nên giữ all in-time mới nhất thay vì lọc
             pagination={false}
             rowKey="_id"
             className="custom-table"
