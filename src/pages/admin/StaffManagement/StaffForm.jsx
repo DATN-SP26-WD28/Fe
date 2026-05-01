@@ -1,6 +1,5 @@
-import React from 'react'
-import { Modal, Form, Input, Select } from 'antd'
-import { DEFAULT_STAFF_ROLE, STAFF_ROLE_VALUES, toRoleOptions } from '@/shared/constants/app.constants'
+import { DEFAULT_STAFF_ROLE } from '@/shared/constants/app.constants'
+import { Form, Input, Modal } from 'antd'
 
 const StaffForm = ({
   isModalOpen,
@@ -10,6 +9,20 @@ const StaffForm = ({
   form,
   confirmLoading,
 }) => {
+
+  // Hàm trung gian xử lý dữ liệu trước khi gửi lên Component cha
+  const handleInternalSubmit = (values) => {
+    const submitData = { ...values };
+
+    // Nếu đang ở mode "Thêm mới" và người dùng không nhập pass -> Gán mặc định
+    if (!editingStaff && !submitData.password) {
+      submitData.password = '123456';
+    }
+
+    // Gọi hàm onFinish gốc truyền từ cha vào
+    onFinish(submitData);
+  };
+
   return (
     <Modal
       title={editingStaff ? 'Cập nhật nhân viên' : 'Thêm nhân viên'}
@@ -25,13 +38,13 @@ const StaffForm = ({
       <Form
         form={form}
         layout="vertical"
-        onFinish={onFinish}
+        onFinish={handleInternalSubmit} // Sử dụng hàm trung gian ở đây
         initialValues={{ role: DEFAULT_STAFF_ROLE }}
         className="mt-4"
       >
         <Form.Item
           label="Tên nhân viên"
-          name="username"
+          name="name"
           rules={[{ required: true, message: 'Vui lòng nhập tên nhân viên' }]}
         >
           <Input placeholder="Nhập tên" />
@@ -56,13 +69,21 @@ const StaffForm = ({
           <Input placeholder="Nhập số điện thoại" />
         </Form.Item>
 
+        {/* TRƯỜNG PASSWORD MỚI THÊM VÀO */}
         <Form.Item
-          label="Vai trò"
-          name="role"
-          rules={[{ required: true, message: 'Vui lòng chọn vai trò' }]}
+          label={editingStaff ? "Mật khẩu mới (Tùy chọn)" : "Mật khẩu"}
+          name="password"
+          extra={
+            editingStaff
+              ? "Bỏ trống nếu không muốn thay đổi mật khẩu hiện tại của nhân viên."
+              : "Nếu để trống, mật khẩu mặc định sẽ được đặt là 123456."
+          }
         >
-          <Select options={toRoleOptions(STAFF_ROLE_VALUES)} />
+          <Input.Password
+            placeholder={editingStaff ? "Nhập mật khẩu mới (nếu muốn đổi)..." : "Mặc định: 123456"}
+          />
         </Form.Item>
+
       </Form>
     </Modal>
   )

@@ -28,6 +28,7 @@ import MenuInterface from '@/pages/Client/MenuInterface'
 import Login from '@/pages/Client/Login'
 import Register from '@/pages/Client/Register'
 import PaymentResult from '@/pages/guest/PaymentResult'
+import Profile from '@/pages/admin/Profile'
 
 const AppRoutes = () => {
   return (
@@ -74,6 +75,7 @@ const AppRoutes = () => {
             <Route path="payment-and-billing" element={<PaymentAndBill />} />
             <Route path="reviews" element={<ReviewManagement />} />
             <Route path="staffs" element={<StaffManagement />} />
+            <Route path="profile" element={<Profile />} />
             {/* <Route path="users" element={<UserManagement />} /> */}
           </Route>
         {/* </Route> */}

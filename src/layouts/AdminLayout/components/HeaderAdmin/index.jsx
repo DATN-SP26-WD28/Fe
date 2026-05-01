@@ -17,11 +17,14 @@ const HeaderAdmin = () => {
   const { user } = getAuthSession()
 
   const handleMenuClick = ({ key }) => {
-    if (key !== 'logout') return
-
-    clearAuthSession()
-    message.success('Đăng xuất thành công')
-    navigate('/login', { replace: true })
+    if (key === 'logout') {
+      clearAuthSession()
+      message.success('Đăng xuất thành công')
+      navigate('/login', { replace: true })
+    } else if (key === 'profile') {
+      // Chuyển hướng đến route chứa trang profile (bạn nhớ khai báo route này trong App.jsx nhé)
+      navigate('/admin/profile')
+    }
   }
 
   return (
