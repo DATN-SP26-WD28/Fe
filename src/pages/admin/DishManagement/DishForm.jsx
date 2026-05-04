@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react'
 import { Modal, Form, Input, InputNumber, Select } from 'antd'
+import ImageUpload from '../../../components/ImageUpload'
 
 const DishForm = ({ isModalOpen, handleCancel, onFinish, editingDish, categories = [], confirmLoading }) => {
   const [form] = Form.useForm()
@@ -58,8 +59,8 @@ const DishForm = ({ isModalOpen, handleCancel, onFinish, editingDish, categories
           <Input.TextArea rows={3} placeholder="Nhập mô tả" />
         </Form.Item>
 
-        <Form.Item name="image" label="URL ảnh" >
-          <Input placeholder="Nhập URL ảnh" />
+        <Form.Item name="image" label="Ảnh">
+          <ImageUpload />
         </Form.Item>
 
         <Form.Item name="status" label="Trạng thái">

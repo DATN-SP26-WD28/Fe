@@ -1,5 +1,6 @@
 import React from 'react'
 import { Modal, Form, Input, Select, Row, Col } from 'antd'
+import ImageUpload from '../../../components/ImageUpload'
 
 const CategoryForm = ({ isModalOpen, handleCancel, onFinish, editingCategory, form, confirmLoading }) => {
   return (
@@ -27,8 +28,8 @@ const CategoryForm = ({ isModalOpen, handleCancel, onFinish, editingCategory, fo
           <Input.TextArea rows={4} placeholder="Mô tả ngắn về danh mục" />
         </Form.Item>
 
-        <Form.Item name="image" label="URL ảnh">
-          <Input placeholder="https://..." />
+        <Form.Item name="image" label="Ảnh">
+          <ImageUpload />
         </Form.Item>
 
         <Form.Item name="status" label="Trạng thái">
