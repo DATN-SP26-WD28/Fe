@@ -28,18 +28,21 @@ const MenuInterface = () => {
   const { data: dishes = [], isLoading: isDishesLoading } = useQuery({
     queryKey: ['dishes', activeTab],
     queryFn: async () => {
+      let rawDishes = [];
       if (activeTab === 0) {
-        // All items
-        return dishAPI.getAll();
+        // Lấy tất cả món
+        rawDishes = await dishAPI.getAll();
+      } else if (activeTab > 0 && categories[activeTab - 1]) {
+        // Lấy món theo category
+        rawDishes = await dishAPI.getAll({ category_id: categories[activeTab - 1]._id });
       }
-      if (activeTab > 0 && categories[activeTab - 1]) {
-        // Specific category
-        return dishAPI.getAll({ category_id: categories[activeTab - 1]._id });
-      }
-      return [];
+
+      // --- LOGIC SỬA ĐỔI TẠI ĐÂY ---
+      // Chỉ giữ lại những món có status là "available"
+      return (rawDishes || []).filter(dish => dish.status === 'available');
+      // ----------------------------
     },
   });
-
   const handleAddItem = (dish) => {
     addToCart({
       _id: dish._id,

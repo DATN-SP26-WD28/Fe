@@ -141,19 +141,16 @@ const StaffManagement = () => {
         return <Tag color={config.color}>{config.label}</Tag>;
       },
     },
+    // Trong cột 'Trạng thái' của bảng
     {
       title: 'Trạng thái',
+      dataIndex: 'status',
       key: 'status',
-      align: 'center',
-      render: (_, record) => {
-        // Giả định backend trả về isLocked. Thay đổi theo data thực tế của bạn
-        const isLocked = record.isLocked || record.status === 'locked';
-        return (
-          <Tag color={isLocked ? 'error' : 'success'}>
-            {isLocked ? 'Đã khóa' : 'Hoạt động'}
-          </Tag>
-        );
-      }
+      render: (status) => (
+        <Tag color={status === 'active' ? 'green' : 'red'}>
+          {status === 'active' ? 'Hoạt động' : 'Đã khóa'}
+        </Tag>
+      ),
     },
     {
       title: 'Thao tác',
