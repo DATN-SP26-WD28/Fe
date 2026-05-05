@@ -7,11 +7,11 @@ import {
 
 const ProtectedRoute = ({ allowedRoles = [], redirectTo = '/login', children }) => {
 	const location = useLocation()
-	const { token, role } = getAuthSession()
+	const { token, user, role } = getAuthSession()
 
-	if (!token || !role) {
+	if (!token || !user || user.status === 'banned') {
 		clearAuthSession()
-		return <Navigate to={redirectTo} replace state={{ from: location }} />
+		return <Navigate to="/login" replace />
 	}
 
 	if (allowedRoles.length && !hasAllowedRole(role, allowedRoles)) {
