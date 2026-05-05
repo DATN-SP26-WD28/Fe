@@ -6,18 +6,20 @@ import categoryAPI from '@/configs/category.api';
 import dishAPI from '@/configs/dish.api';
 import { formatCurrency } from '@/shared/utils/currency';
 
-
 const MenuInterface = () => {
   const [activeTab, setActiveTab] = useState(0);
   const mobilTabRefs = useRef([]);
   const { addToCart, openCart } = useCart();
 
+  // 1. LẤY DANH MỤC ĐANG HOẠT ĐỘNG
   const { data: categories = [], isLoading: isCategoriesLoading } = useQuery({
     queryKey: ['categories'],
-    queryFn: () => categoryAPI.getAll(),
+    queryFn: async () => {
+      const data = await categoryAPI.getAll();
+      return data.filter(cat => cat.status === 'Active');
+    },
   });
 
-  // Add "All" category at the beginning
   const categoriesWithAll = [
     { _id: 'all', name: 'All' },
     ...categories,
@@ -25,24 +27,46 @@ const MenuInterface = () => {
 
   const activeCategory = categoriesWithAll[activeTab];
 
+  // 2. LẤY MÓN ĂN VÀ LỌC
   const { data: dishes = [], isLoading: isDishesLoading } = useQuery({
-    queryKey: ['dishes', activeTab],
+    // Đưa độ dài mảng categories vào queryKey để cập nhật ngay khi danh mục thay đổi
+    queryKey: ['dishes', activeTab, categories.length],
     queryFn: async () => {
-      let rawDishes = [];
+      let fetchedDishes = [];
+
       if (activeTab === 0) {
-        // Lấy tất cả món
-        rawDishes = await dishAPI.getAll();
+        // GIẢI PHÁP LÁCH LỖI API:
+        // Thay vì gọi dishAPI.getAll() bị lỗi mảng rỗng, ta duyệt qua tất cả danh mục 
+        // đang Active và lấy món ăn của từng danh mục rồi gộp lại.
+        if (categories.length > 0) {
+          const promises = categories.map(cat => dishAPI.getAll({ category_id: cat._id }));
+          const responses = await Promise.all(promises);
+
+          // Gộp tất cả kết quả lại thành 1 mảng duy nhất
+          responses.forEach(res => {
+            const arr = Array.isArray(res) ? res : (res?.data || res?.dishes || []);
+            fetchedDishes = [...fetchedDishes, ...arr];
+          });
+        }
       } else if (activeTab > 0 && categories[activeTab - 1]) {
-        // Lấy món theo category
-        rawDishes = await dishAPI.getAll({ category_id: categories[activeTab - 1]._id });
+        // Tab danh mục cụ thể (Đồ uống, Món chính...) -> Gọi API theo ID như bình thường
+        const res = await dishAPI.getAll({ category_id: categories[activeTab - 1]._id });
+        fetchedDishes = Array.isArray(res) ? res : (res?.data || []);
       }
 
-      // --- LOGIC SỬA ĐỔI TẠI ĐÂY ---
-      // Chỉ giữ lại những món có status là "available"
-      return (rawDishes || []).filter(dish => dish.status === 'available');
-      // ----------------------------
+      // Xử lý cuối: Chỉ lấy món "available" và loại bỏ món trùng lặp (nếu API lỡ trả về trùng)
+      const uniqueDishesMap = new Map();
+      fetchedDishes.forEach(dish => {
+        if (dish && dish.status === 'available') {
+          uniqueDishesMap.set(dish._id, dish);
+        }
+      });
+
+      return Array.from(uniqueDishesMap.values());
     },
+    enabled: !isCategoriesLoading,
   });
+
   const handleAddItem = (dish) => {
     addToCart({
       _id: dish._id,
@@ -51,11 +75,11 @@ const MenuInterface = () => {
       image: dish.image,
       description: dish.description,
     });
-    // Gợi ý: Nếu muốn thêm xong bật giỏ hàng lên luôn thì dùng: openCart();
+    // openCart(); // Mở giỏ hàng sau khi thêm (nếu cần)
   };
 
   return (
-    <div className="pb-24"> {/* Thêm padding bottom để không bị thanh Bar che */}
+    <div className="pb-24">
       {/* ── Mobile Tab Bar ── */}
       <nav className="md:hidden sticky top-0 z-20 flex overflow-x-auto bg-white shadow-sm border-b border-gray-200">
         {categoriesWithAll.map((item, index) => (
@@ -101,6 +125,8 @@ const MenuInterface = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {isDishesLoading ? (
             <div className="col-span-full py-20 text-center text-gray-400">Đang chuẩn bị thực đơn...</div>
+          ) : dishes.length === 0 ? (
+            <div className="col-span-full py-20 text-center text-gray-400">Chưa có món ăn nào.</div>
           ) : (
             dishes.map((dish) => (
               <FoodCard
