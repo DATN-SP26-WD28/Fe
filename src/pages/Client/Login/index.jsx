@@ -11,6 +11,12 @@ const Login = () => {
   const mutation = useMutation({
     mutationFn: loginUser,
     onSuccess: (res) => {
+      const user = res.data.user;
+
+      if (user.status === 'banned') {
+        message.error('Tài khoản của bạn đã bị khóa!');
+        return; 
+      }
       // 1. Lưu Token vào localStorage để dùng cho các API cần Auth (như /me)
       localStorage.setItem('token', res.data.token)
       localStorage.setItem('user', JSON.stringify(res.data.user))

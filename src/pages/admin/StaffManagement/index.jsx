@@ -159,7 +159,7 @@ const StaffManagement = () => {
       width: 180,
       render: (_, record) => {
         // Giả định tương tự để đổi icon Lock/Unlock
-        const isLocked = record.isLocked || record.status === 'locked';
+        const isLocked = record.isLocked || record.status === 'banned';
 
         return (
           <Space>
@@ -171,18 +171,31 @@ const StaffManagement = () => {
             />
 
             <Popconfirm
-              title={isLocked ? "Mở khóa tài khoản này?" : "Khóa tài khoản này?"}
+              // Tự động thay đổi tiêu đề dựa trên trạng thái
+              title={isLocked ? "Bạn muốn mở khóa tài khoản này?" : "Bạn muốn khóa tài khoản này?"}
+              description={isLocked ? "Tài khoản sẽ có thể đăng nhập lại vào hệ thống." : "Người dùng này sẽ không thể đăng nhập sau khi bị khóa."}
               okText="Đồng ý"
               cancelText="Hủy"
               onConfirm={() => onToggleStatus(record._id)}
+              okButtonProps={{ danger: !isLocked }} // Nút "Đồng ý" sẽ có màu đỏ nếu là hành động Khóa
             >
               <Button
                 type="text"
-                icon={isLocked ? <Unlock size={18} className="text-green-500" /> : <Lock size={18} className="text-orange-500" />}
-                title={isLocked ? "Mở khóa" : "Khóa"}
-              />
+                // Thay đổi Icon và màu sắc linh hoạt
+                icon={
+                  isLocked ? (
+                    <Unlock size={18} className="text-green-500" />
+                  ) : (
+                    <Lock size={18} className="text-orange-500" />
+                  )
+                }
+                // Cập nhật tooltip hiển thị khi di chuột vào
+                title={isLocked ? "Mở khóa tài khoản" : "Khóa tài khoản"}
+              >
+                {/* Nếu bạn muốn hiển thị cả chữ bên cạnh icon thì thêm dòng dưới, nếu không thì để trống */}
+                {/* {isLocked ? "Mở khóa" : "Khóa"} */}
+              </Button>
             </Popconfirm>
-
             <Popconfirm
               title="Bạn có chắc chắn muốn xóa?"
               description={`Xóa nhân viên ${record.username}?`}
