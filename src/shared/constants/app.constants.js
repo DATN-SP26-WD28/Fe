@@ -51,6 +51,7 @@ export const ROLE_LABEL_MAP = {
   waiter: { label: 'Phục vụ', color: 'cyan' },
   chef: { label: 'Nhân viên bếp', color: 'orange' },
   customer: { label: 'Nhân viên', color: 'default' },
+  staff: { label: 'Quản lý', color: 'orange' },
 }
 
 export const STAFF_ROLE_VALUES = ['admin', 'cashier', 'waiter', 'chef']

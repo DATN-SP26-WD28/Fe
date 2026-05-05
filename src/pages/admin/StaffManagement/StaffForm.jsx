@@ -1,5 +1,5 @@
 import { DEFAULT_STAFF_ROLE } from '@/shared/constants/app.constants'
-import { Form, Input, Modal } from 'antd'
+import { Form, Input, Modal, Select } from 'antd'
 
 const StaffForm = ({
   isModalOpen,
@@ -10,16 +10,12 @@ const StaffForm = ({
   confirmLoading,
 }) => {
 
-  // Hàm trung gian xử lý dữ liệu trước khi gửi lên Component cha
   const handleInternalSubmit = (values) => {
     const submitData = { ...values };
-
-    // Nếu đang ở mode "Thêm mới" và người dùng không nhập pass -> Gán mặc định
+    // Nếu tạo mới mà để trống pass thì mới gán mặc định
     if (!editingStaff && !submitData.password) {
       submitData.password = '123456';
     }
-
-    // Gọi hàm onFinish gốc truyền từ cha vào
     onFinish(submitData);
   };
 
@@ -38,13 +34,13 @@ const StaffForm = ({
       <Form
         form={form}
         layout="vertical"
-        onFinish={handleInternalSubmit} // Sử dụng hàm trung gian ở đây
+        onFinish={handleInternalSubmit}
         initialValues={{ role: DEFAULT_STAFF_ROLE }}
         className="mt-4"
       >
         <Form.Item
           label="Tên nhân viên"
-          name="name"
+          name="username" // ĐỔI TỪ name THÀNH username ĐỂ KHỚP VỚI DATABASE
           rules={[{ required: true, message: 'Vui lòng nhập tên nhân viên' }]}
         >
           <Input placeholder="Nhập tên" />
@@ -69,21 +65,32 @@ const StaffForm = ({
           <Input placeholder="Nhập số điện thoại" />
         </Form.Item>
 
-        {/* TRƯỜNG PASSWORD MỚI THÊM VÀO */}
+        <Form.Item
+          label="Vai trò"
+          name="role"
+          rules={[{ required: true, message: 'Vui lòng chọn vai trò' }]}
+        >
+          <Select placeholder="Chọn vai trò">
+            <Select.Option value="staff">Quản lý</Select.Option>
+            <Select.Option value="customer">Nhân viên</Select.Option>
+          </Select>
+        </Form.Item>
+
         <Form.Item
           label={editingStaff ? "Mật khẩu mới (Tùy chọn)" : "Mật khẩu"}
           name="password"
           extra={
             editingStaff
-              ? "Bỏ trống nếu không muốn thay đổi mật khẩu hiện tại của nhân viên."
-              : "Nếu để trống, mật khẩu mặc định sẽ được đặt là 123456."
+              ? "Bỏ trống nếu không muốn thay đổi mật khẩu hiện tại."
+              : "Nếu để trống, mật khẩu mặc định sẽ là 123456."
           }
+          // CHỈ BẮT BUỘC KHI TẠO MỚI (editingStaff = null)
+          rules={[{ required: !editingStaff, message: 'Vui lòng nhập mật khẩu' }]}
         >
           <Input.Password
-            placeholder={editingStaff ? "Nhập mật khẩu mới (nếu muốn đổi)..." : "Mặc định: 123456"}
+            placeholder={editingStaff ? "Nhập mật khẩu mới..." : "Mặc định: 123456"}
           />
         </Form.Item>
-
       </Form>
     </Modal>
   )

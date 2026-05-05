@@ -5,7 +5,7 @@ const AUTH_KEYS = {
   guestInfo: 'guestInfo',
 }
 
-export const ADMIN_ALLOWED_ROLES = ['admin', 'cashier', 'waiter', 'chef', 'customer']
+export const ADMIN_ALLOWED_ROLES = ['admin', 'cashier', 'waiter', 'chef', 'customer','staff']
 
 const parseUser = (rawUser) => {
   if (!rawUser) return null

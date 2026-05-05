@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
 import { Card, Table, Tag, Breadcrumb, Button, Form, Popconfirm, Space, message } from 'antd';
-// Bổ sung import icon Lock
 import { Edit, Trash2, Plus, Lock, Unlock } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { ROLE_LABEL_MAP } from '@/shared/constants/app.constants';
 import StaffForm from './StaffForm';
-import { createStaff, deleteStaff, fetchStaff, toggleStaffStatus, updateStaff } from '@/configs/user.api';
+import {
+  createStaff,
+  deleteStaff,
+  fetchStaff,
+  toggleStaffStatus,
+  updateStaff
+} from '@/configs/user.api';
 
 const StaffManagement = () => {
   const queryClient = useQueryClient();
@@ -14,11 +19,13 @@ const StaffManagement = () => {
   const [editingStaff, setEditingStaff] = useState(null);
   const [form] = Form.useForm();
 
+  // 1. Lấy danh sách nhân viên
   const { data: staff = [], isLoading } = useQuery({
     queryKey: ['staff'],
     queryFn: fetchStaff,
   });
 
+  // 2. Mutation: Tạo mới
   const createMutation = useMutation({
     mutationFn: createStaff,
     onSuccess: () => {
@@ -31,6 +38,7 @@ const StaffManagement = () => {
     },
   });
 
+  // 3. Mutation: Cập nhật
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => updateStaff(id, data),
     onSuccess: () => {
@@ -43,6 +51,7 @@ const StaffManagement = () => {
     },
   });
 
+  // 4. Mutation: Xóa
   const deleteMutation = useMutation({
     mutationFn: deleteStaff,
     onSuccess: () => {
@@ -54,46 +63,45 @@ const StaffManagement = () => {
     },
   });
 
-  // MỚI: Mutation xử lý Khóa / Mở khóa
+  // 5. Mutation: Khóa / Mở khóa
   const toggleStatusMutation = useMutation({
     mutationFn: toggleStaffStatus,
     onSuccess: () => {
-      message.success('Cập nhật trạng thái thành công');
+      message.success(' cập nhật trạng thái thành công');
       queryClient.invalidateQueries({ queryKey: ['staff'] });
     },
     onError: (err) => {
-      message.error(err.response?.data?.message || 'Lỗi khi cập nhật trạng thái');
+      message.error(err.response?.data?.message || 'Lỗi cập nhật trạng thái');
     },
   });
 
+  // Mở modal thêm mới
   const openCreateModal = () => {
     setEditingStaff(null);
     form.resetFields();
     setVisibleModal(true);
   };
 
+  // Mở modal chỉnh sửa (Quan trọng: Phải khớp name của Form.Item)
   const onEdit = (record) => {
     setEditingStaff(record);
     form.setFieldsValue({
-      username: record.username,
+      username: record.username, // Khớp với name="username" trong StaffForm
       email: record.email,
       phone: record.phone,
       role: record.role,
+      password: '', // Để trống mật khẩu khi sửa
     });
     setVisibleModal(true);
   };
 
-  const onDelete = (id) => {
-    deleteMutation.mutate(id);
-  };
-
-  // MỚI: Hàm gọi API khóa
-  const onToggleStatus = (id) => {
-    toggleStatusMutation.mutate(id);
-  };
-
+  // Xử lý gửi dữ liệu
   const onFinish = async (values) => {
-    const payload = { ...values, role: 'customer' };
+    // Lọc dữ liệu: Nếu password rỗng thì xóa luôn key password khỏi payload
+    const payload = { ...values };
+    if (!payload.password) {
+      delete payload.password;
+    }
 
     if (editingStaff) {
       updateMutation.mutate({ id: editingStaff._id, data: payload });
@@ -113,14 +121,14 @@ const StaffManagement = () => {
       title: 'STT',
       key: 'index',
       render: (_, __, index) => index + 1,
-      width: 70,
+      width: 60,
       align: 'center',
     },
     {
       title: 'Tên nhân viên',
       dataIndex: 'username',
       key: 'username',
-      render: (value) => <span className="font-medium">{value}</span>,
+      render: (value) => <span className="font-medium text-gray-700">{value}</span>,
     },
     {
       title: 'Email',
@@ -137,11 +145,10 @@ const StaffManagement = () => {
       dataIndex: 'role',
       key: 'role',
       render: (role) => {
-        const config = ROLE_LABEL_MAP[role] || { label: role || 'Không xác định', color: 'default' };
+        const config = ROLE_LABEL_MAP[role] || { label: role, color: 'default' };
         return <Tag color={config.color}>{config.label}</Tag>;
       },
     },
-    // Trong cột 'Trạng thái' của bảng
     {
       title: 'Trạng thái',
       dataIndex: 'status',
@@ -156,55 +163,46 @@ const StaffManagement = () => {
       title: 'Thao tác',
       key: 'actions',
       align: 'center',
-      width: 180,
+      width: 150,
       render: (_, record) => {
-        // Giả định tương tự để đổi icon Lock/Unlock
-        const isLocked = record.isLocked || record.status === 'banned';
-
+        const isLocked = record.status === 'banned' || record.isLocked;
         return (
-          <Space>
+          <Space size="middle">
             <Button
               type="text"
+              className="p-0 flex items-center justify-center hover:bg-blue-50"
               icon={<Edit size={18} className="text-blue-500" />}
               onClick={() => onEdit(record)}
-              title="Sửa"
             />
 
             <Popconfirm
-              // Tự động thay đổi tiêu đề dựa trên trạng thái
-              title={isLocked ? "Bạn muốn mở khóa tài khoản này?" : "Bạn muốn khóa tài khoản này?"}
-              description={isLocked ? "Tài khoản sẽ có thể đăng nhập lại vào hệ thống." : "Người dùng này sẽ không thể đăng nhập sau khi bị khóa."}
+              title={isLocked ? "Mở khóa tài khoản?" : "Khóa tài khoản?"}
+              onConfirm={() => toggleStatusMutation.mutate(record._id)}
               okText="Đồng ý"
               cancelText="Hủy"
-              onConfirm={() => onToggleStatus(record._id)}
-              okButtonProps={{ danger: !isLocked }} // Nút "Đồng ý" sẽ có màu đỏ nếu là hành động Khóa
             >
               <Button
                 type="text"
-                // Thay đổi Icon và màu sắc linh hoạt
-                icon={
-                  isLocked ? (
-                    <Unlock size={18} className="text-green-500" />
-                  ) : (
-                    <Lock size={18} className="text-orange-500" />
-                  )
+                className={`p-0 flex items-center justify-center ${isLocked ? 'hover:bg-green-50' : 'hover:bg-orange-50'}`}
+                icon={isLocked ?
+                  <Unlock size={18} className="text-green-500" /> :
+                  <Lock size={18} className="text-orange-500" />
                 }
-                // Cập nhật tooltip hiển thị khi di chuột vào
-                title={isLocked ? "Mở khóa tài khoản" : "Khóa tài khoản"}
-              >
-                {/* Nếu bạn muốn hiển thị cả chữ bên cạnh icon thì thêm dòng dưới, nếu không thì để trống */}
-                {/* {isLocked ? "Mở khóa" : "Khóa"} */}
-              </Button>
+              />
             </Popconfirm>
+
             <Popconfirm
-              title="Bạn có chắc chắn muốn xóa?"
-              description={`Xóa nhân viên ${record.username}?`}
+              title="Xóa nhân viên này?"
+              onConfirm={() => deleteMutation.mutate(record._id)}
               okText="Xóa"
               cancelText="Hủy"
               okButtonProps={{ danger: true }}
-              onConfirm={() => onDelete(record._id)}
             >
-              <Button type="text" icon={<Trash2 size={18} />} title="Xóa" className="text-red-500 hover:text-red-700" />
+              <Button
+                type="text"
+                className="p-0 flex items-center justify-center hover:bg-red-50"
+                icon={<Trash2 size={18} className="text-red-500" />}
+              />
             </Popconfirm>
           </Space>
         );
@@ -213,30 +211,35 @@ const StaffManagement = () => {
   ];
 
   return (
-    <>
-      <div className="flex items-center justify-between mb-4">
+    <div className="p-4 md:p-6">
+      <div className="flex items-center justify-between mb-6">
         <section>
-          <h1 className="font-bold text-2xl md:text-3xl mb-1">Quản lý nhân viên</h1>
-          <Breadcrumb items={[{ title: 'Trang chủ' }, { title: 'Quản lý nhân viên' }]} />
+          <h1 className="font-bold text-2xl text-gray-800 mb-1">Quản lý nhân viên</h1>
+          <Breadcrumb items={[{ title: 'Trang chủ' }, { title: 'Nhân viên' }]} />
         </section>
 
-        <Button type="primary" icon={<Plus size={16} />} onClick={openCreateModal}>
+        <Button
+          type="primary"
+          size="large"
+          className="rounded-lg bg-orange-500 hover:bg-orange-600 border-none flex items-center gap-2"
+          icon={<Plus size={18} />}
+          onClick={openCreateModal}
+        >
           Thêm nhân viên
         </Button>
       </div>
 
-      <Card className="shadow-sm rounded-2xl xl:col-span-2 border border-gray-100" title="Danh sách nhân viên">
+      <Card className="shadow-sm rounded-2xl border-none">
         <Table
           columns={columns}
           dataSource={staff}
           rowKey="_id"
           loading={isLoading}
           pagination={{
-            pageSize: 7,
-            showSizeChanger: false,
-            showTotal: (total) => `Tổng cộng ${total} nhân viên`
+            pageSize: 8,
+            showTotal: (total) => `Tổng cộng ${total} nhân viên`,
+            position: ['bottomCenter']
           }}
-          className="rounded-xl overflow-hidden"
           scroll={{ x: 'max-content' }}
         />
       </Card>
@@ -249,7 +252,7 @@ const StaffManagement = () => {
         form={form}
         confirmLoading={createMutation.isPending || updateMutation.isPending}
       />
-    </>
+    </div>
   );
 };
 
